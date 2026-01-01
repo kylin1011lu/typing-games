@@ -76,6 +76,37 @@
                 </div>
             </div>
 
+            <div class="stage-info" style="margin-top: 40px;">
+                <h2>📝 第三阶段：简单词组</h2>
+                <p>开始练习连续按键，拼写简单的单词！</p>
+            </div>
+
+            <div class="games-grid">
+                <div class="game-card" onclick="location.href='games/word-rescue.html'">
+                    <div class="game-icon">🐾</div>
+                    <h3>单词救援</h3>
+                    <p>拼写单词，救出可爱的小动物</p>
+                    <div class="stars">
+                        <span class="star empty">⭐</span>
+                        <span class="star empty">⭐</span>
+                        <span class="star empty">⭐</span>
+                    </div>
+                    <button class="play-btn">开始游戏</button>
+                </div>
+
+                <div class="game-card" style="opacity: 0.5; cursor: not-allowed;" onclick="alert('敬请期待！')">
+                    <div class="game-icon">🏎️</div>
+                    <h3>打字赛车</h3>
+                    <p>输入单词让赛车飞驰</p>
+                    <div class="stars">
+                        <span class="star empty">⭐</span>
+                        <span class="star empty">⭐</span>
+                        <span class="star empty">⭐</span>
+                    </div>
+                    <button class="play-btn">敬请期待</button>
+                </div>
+            </div>
+
             <div class="progress-section">
                 <h3>📊 学习进度</h3>
                 <div class="progress-bar">
@@ -109,9 +140,13 @@
             const musicStars = parseInt(localStorage.getItem('music-jump-stars') || 0);
             updateStarDisplay('music-jump', musicStars);
             
+            // 加载单词救援星级
+            const wordStars = parseInt(localStorage.getItem('word-rescue-stars') || 0);
+            updateStarDisplay('word-rescue', wordStars);
+            
             // 计算总进度
-            const totalStars = farmStars + bubbleStars + fingerStars + musicStars;
-            const maxStars = 12; // 四个游戏，每个最多3星
+            const totalStars = farmStars + bubbleStars + fingerStars + musicStars + wordStars;
+            const maxStars = 15; // 五个游戏，每个最多3星
             const progress = Math.round((totalStars / maxStars) * 100);
             
             document.querySelector('.progress-fill').style.width = progress + '%';
@@ -132,6 +167,8 @@
                 targetCard = gameCards[2];
             } else if (gameId === 'music-jump') {
                 targetCard = gameCards[3];
+            }else if (gameId === 'word-rescue') {
+                targetCard = gameCards[4];
             }
             
             if (targetCard) {

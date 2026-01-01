@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词救援 - 第三阶段游戏1</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            max-width: 1000px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .back-btn {
+            background: #f0f0f0;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: #e0e0e0;
+            transform: scale(1.05);
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .help-btn, .settings-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+
+        .help-btn:hover, .settings-btn:hover {
+            background: #5568d3;
+            transform: scale(1.1);
+        }
+
+        .game-title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .game-title h1 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 15px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .game-area {
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
+            border-radius: 15px;
+            padding: 40px;
+            min-height: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .animal-container {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .animal-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            width: 140px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .animal-card.trapped {
+            background: #ffe0e0;
+            border: 3px dashed #ff6b6b;
+        }
+
+        .animal-card.rescued {
+            background: #d4edda;
+            border: 3px solid #28a745;
+            transform: scale(1.1);
+        }
+
+        .animal-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+            filter: grayscale(100%);
+            opacity: 0.5;
+        }
+
+        .animal-card.rescued .animal-icon {
+            filter: grayscale(0%);
+            opacity: 1;
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .animal-word {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .animal-meaning {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .cage-icon {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 1.5em;
+        }
+
+        .current-word-area {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .current-word-prompt {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .word-display {
+            font-size: 2.5em;
+            font-weight: bold;
+            letter-spacing: 10px;
+            margin-bottom: 20px;
+            min-height: 60px;
+            color: #667eea;
+        }
+
+        .typed-letter {
+            color: #28a745;
+        }
+
+        .current-letter {
+            color: #ff6b6b;
+            text-decoration: underline;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .input-display {
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            padding: 15px 30px;
+            font-size: 2em;
+            text-align: center;
+            letter-spacing: 5px;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            max-width: 500px;
+        }
+
+        .game-controls {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .start-btn, .next-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .start-btn:hover, .next-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .feedback-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px 60px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            font-size: 2em;
+            font-weight: bold;
+            z-index: 1000;
+            display: none;
+            text-align: center;
+        }
+
+        .feedback-message.show {
+            display: block;
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .result-screen {
+            display: none;
+            text-align: center;
+        }
+
+        .result-screen.show {
+            display: block;
+        }
+
+        .result-screen h2 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .stars {
+            font-size: 3em;
+            margin: 30px 0;
+        }
+
+        .result-stats {
+            background: #f9f9f9;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+
+        .result-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .result-stat:last-child {
+            border-bottom: none;
+        }
+
+        .result-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .retry-btn, .home-btn {
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+        }
+
+        .retry-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .home-btn {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        /* 帮助模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2em;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .modal h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .modal-section {
+            margin-bottom: 20px;
+        }
+
+        .modal-section h3 {
+            color: #764ba2;
+            margin-bottom: 10px;
+        }
+
+        .modal-section p, .modal-section ul {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .modal-section ul {
+            margin-left: 20px;
+        }
+
+        .level-progress {
+            background: #f0f0f0;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 1.1em;
+            color: #667eea;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <button class="back-btn" onclick="location.href='../index.html'">← 返回</button>
+            <div class="header-buttons">
+                <button class="help-btn" onclick="showHelp()">❓</button>
+            </div>
+        </div>
+
+        <div class="game-title">
+            <h1>🐾 单词救援</h1>
+            <p>拼写正确单词，救出被困的小动物！</p>
+        </div>
+
+        <div class="game-stats">
+            <div class="stat">
+                <div class="stat-label">已救援</div>
+                <div class="stat-value" id="rescued">0</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">关卡</div>
+                <div class="stat-value" id="level">1</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">准确率</div>
+                <div class="stat-value" id="accuracy">100%</div>
+            </div>
+        </div>
+
+        <div class="game-area" id="gameArea">
+            <div class="animal-container" id="animalContainer"></div>
+            
+            <div class="current-word-area" id="wordArea" style="display: none;">
+                <div class="current-word-prompt">拼写这个单词：</div>
+                <div class="word-display" id="wordDisplay"></div>
+                <div class="input-display" id="inputDisplay">准备输入...</div>
+            </div>
+
+            <div class="game-controls">
+                <button class="start-btn" id="startBtn" onclick="startGame()">开始救援 🚀</button>
+            </div>
+        </div>
+
+        <div class="result-screen" id="resultScreen">
+            <h2>🎉 救援完成！</h2>
+            <div class="stars" id="resultStars"></div>
+            <div class="result-stats">
+                <div class="result-stat">
+                    <span>救援数量</span>
+                    <span id="finalRescued">0</span>
+                </div>
+                <div class="result-stat">
+                    <span>完成关卡</span>
+                    <span id="finalLevel">0</span>
+                </div>
+                <div class="result-stat">
+                    <span>总体准确率</span>
+                    <span id="finalAccuracy">0%</span>
+                </div>
+                <div class="result-stat">
+                    <span>错误次数</span>
+                    <span id="finalErrors">0</span>
+                </div>
+            </div>
+            <div class="result-buttons">
+                <button class="retry-btn" onclick="location.reload()">再玩一次</button>
+                <button class="home-btn" onclick="location.href='../index.html'">返回主页</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="feedback-message" id="feedbackMessage"></div>
+
+    <!-- 帮助模态框 -->
+    <div class="modal" id="helpModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeHelp()">×</button>
+            <h2>📖 游戏说明</h2>
+            
+            <div class="modal-section">
+                <h3>🎯 游戏目标</h3>
+                <p>拼写正确的英文单词，救出被困在笼子里的可爱小动物！</p>
+            </div>
+
+            <div class="modal-section">
+                <h3>🎮 游戏规则</h3>
+                <ul>
+                    <li>每关有3-4个被困的小动物</li>
+                    <li>根据提示拼写单词（英文）</li>
+                    <li>拼写正确后救出对应的动物</li>
+                    <li>完成所有动物救援后进入下一关</li>
+                    <li>共有5关，难度逐渐增加</li>
+                </ul>
+            </div>
+
+            <div class="modal-section">
+                <h3>⭐ 星级要求</h3>
+                <ul>
+                    <li>⭐ 1星：救出10个以上动物</li>
+                    <li>⭐⭐ 2星：完成3关 + 准确率85%以上</li>
+                    <li>⭐⭐⭐ 3星：完成全部5关 + 准确率95%以上</li>
+                </ul>
+            </div>
+
+            <div class="modal-section">
+                <h3>💡 小贴士</h3>
+                <ul>
+                    <li>仔细看清楚每个字母，不要着急</li>
+                    <li>注意大小写，游戏不区分大小写</li>
+                    <li>拼错了可以继续尝试</li>
+                    <li>单词越长越有挑战性</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 游戏词库 - 按难度分级
+        const wordLists = {
+            1: [ // 3字母简单词
+                { word: 'cat', meaning: '猫', icon: '🐱' },
+                { word: 'dog', meaning: '狗', icon: '🐶' },
+                { word: 'sun', meaning: '太阳', icon: '☀️' },
+                { word: 'fox', meaning: '狐狸', icon: '🦊' }
+            ],
+            2: [ // 4字母词
+                { word: 'bird', meaning: '鸟', icon: '🐦' },
+                { word: 'fish', meaning: '鱼', icon: '🐟' },
+                { word: 'frog', meaning: '青蛙', icon: '🐸' },
+                { word: 'bear', meaning: '熊', icon: '🐻' }
+            ],
+            3: [ // 5字母词
+                { word: 'tiger', meaning: '老虎', icon: '🐯' },
+                { word: 'sheep', meaning: '羊', icon: '🐑' },
+                { word: 'mouse', meaning: '老鼠', icon: '🐭' },
+                { word: 'horse', meaning: '马', icon: '🐴' }
+            ],
+            4: [ // 6字母词
+                { word: 'rabbit', meaning: '兔子', icon: '🐰' },
+                { word: 'monkey', meaning: '猴子', icon: '🐵' },
+                { word: 'turtle', meaning: '乌龟', icon: '🐢' },
+                { word: 'dragon', meaning: '龙', icon: '🐲' }
+            ],
+            5: [ // 7字母及以上
+                { word: 'penguin', meaning: '企鹅', icon: '🐧' },
+                { word: 'chicken', meaning: '小鸡', icon: '🐥' },
+                { word: 'dolphin', meaning: '海豚', icon: '🐬' }
+            ]
+        };
+
+        // 游戏状态
+        const gameState = {
+            isPlaying: false,
+            currentLevel: 1,
+            currentAnimalIndex: 0,
+            currentAnimals: [],
+            currentInput: '',
+            rescued: 0,
+            totalTyped: 0,
+            totalErrors: 0,
+            levelComplete: false
+        };
+
+        // 音效
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(frequency, duration, type = 'sine') {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playSuccessSound() {
+            playSound(523.25, 0.1); // C5
+            setTimeout(() => playSound(659.25, 0.1), 100); // E5
+            setTimeout(() => playSound(783.99, 0.2), 200); // G5
+        }
+
+        function playErrorSound() {
+            playSound(200, 0.2, 'square');
+        }
+
+        function playRescueSound() {
+            playSound(523.25, 0.1);
+            setTimeout(() => playSound(659.25, 0.1), 80);
+            setTimeout(() => playSound(783.99, 0.1), 160);
+            setTimeout(() => playSound(1046.50, 0.3), 240);
+        }
+
+        // 开始游戏
+        function startGame() {
+            gameState.isPlaying = true;
+            gameState.currentLevel = 1;
+            gameState.rescued = 0;
+            gameState.totalTyped = 0;
+            gameState.totalErrors = 0;
+
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('wordArea').style.display = 'block';
+
+            loadLevel(1);
+        }
+
+        // 加载关卡
+        function loadLevel(level) {
+            gameState.currentLevel = level;
+            gameState.currentAnimalIndex = 0;
+            gameState.levelComplete = false;
+
+            // 获取当前关卡的动物列表
+            gameState.currentAnimals = [...wordLists[level]];
+            
+            // 渲染动物卡片
+            renderAnimals();
+            
+            // 显示第一个单词
+            showNextWord();
+            
+            // 更新UI
+            updateStats();
+        }
+
+        // 渲染动物卡片
+        function renderAnimals() {
+            const container = document.getElementById('animalContainer');
+            container.innerHTML = '';
+            
+            gameState.currentAnimals.forEach((animal, index) => {
+                const card = document.createElement('div');
+                card.className = 'animal-card trapped';
+                card.id = `animal-${index}`;
+                card.innerHTML = `
+                    <div class="cage-icon">🔒</div>
+                    <div class="animal-icon">${animal.icon}</div>
+                    <div class="animal-word">${animal.word}</div>
+                    <div class="animal-meaning">${animal.meaning}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // 显示下一个单词
+        function showNextWord() {
+            if (gameState.currentAnimalIndex >= gameState.currentAnimals.length) {
+                completeLevel();
+                return;
+            }
+
+            const animal = gameState.currentAnimals[gameState.currentAnimalIndex];
+            gameState.currentInput = '';
+            
+            displayWord(animal.word, '');
+            document.getElementById('inputDisplay').textContent = '准备输入...';
+        }
+
+        // 显示单词
+        function displayWord(word, typed) {
+            const display = document.getElementById('wordDisplay');
+            let html = '';
+            
+            for (let i = 0; i < word.length; i++) {
+                if (i < typed.length) {
+                    html += `<span class="typed-letter">${word[i].toUpperCase()}</span>`;
+                } else if (i === typed.length) {
+                    html += `<span class="current-letter">${word[i].toUpperCase()}</span>`;
+                } else {
+                    html += `<span>${word[i].toUpperCase()}</span>`;
+                }
+            }
+            
+            display.innerHTML = html;
+        }
+
+        // 键盘输入处理
+        document.addEventListener('keydown', (e) => {
+            if (!gameState.isPlaying || gameState.levelComplete) return;
+            
+            const key = e.key.toLowerCase();
+            
+            // 只处理字母键
+            if (key.length === 1 && key >= 'a' && key <= 'z') {
+                handleInput(key);
+            }
+        });
+
+        // 处理输入
+        function handleInput(char) {
+            const animal = gameState.currentAnimals[gameState.currentAnimalIndex];
+            const targetWord = animal.word.toLowerCase();
+            const currentPos = gameState.currentInput.length;
+            
+            gameState.totalTyped++;
+
+            if (char === targetWord[currentPos]) {
+                // 正确输入
+                gameState.currentInput += char;
+                playSound(440 + currentPos * 50, 0.1);
+                
+                displayWord(targetWord, gameState.currentInput);
+                document.getElementById('inputDisplay').textContent = gameState.currentInput.toUpperCase();
+                
+                // 检查是否完成单词
+                if (gameState.currentInput === targetWord) {
+                    rescueAnimal();
+                }
+            } else {
+                // 错误输入
+                gameState.totalErrors++;
+                playErrorSound();
+                showFeedback('❌ 拼错了，再试试！', '#ff6b6b');
+            }
+            
+            updateStats();
+        }
+
+        // 救援动物
+        function rescueAnimal() {
+            const animalCard = document.getElementById(`animal-${gameState.currentAnimalIndex}`);
+            animalCard.classList.remove('trapped');
+            animalCard.classList.add('rescued');
+            animalCard.querySelector('.cage-icon').textContent = '✅';
+            
+            gameState.rescued++;
+            playRescueSound();
+            
+            showFeedback('🎉 太棒了！动物获救！', '#28a745');
+            
+            setTimeout(() => {
+                gameState.currentAnimalIndex++;
+                showNextWord();
+            }, 1500);
+        }
+
+        // 完成关卡
+        function completeLevel() {
+            gameState.levelComplete = true;
+            
+            if (gameState.currentLevel < 5) {
+                showFeedback(`🎊 第${gameState.currentLevel}关完成！`, '#667eea');
+                
+                setTimeout(() => {
+                    loadLevel(gameState.currentLevel + 1);
+                }, 2000);
+            } else {
+                // 完成所有关卡
+                setTimeout(() => {
+                    endGame();
+                }, 1500);
+            }
+        }
+
+        // 结束游戏
+        function endGame() {
+            gameState.isPlaying = false;
+            
+            const accuracy = gameState.totalTyped > 0 ? 
+                ((gameState.totalTyped - gameState.totalErrors) / gameState.totalTyped * 100).toFixed(1) : 100;
+            
+            // 计算星级
+            let stars = 0;
+            if (gameState.rescued >= 10) stars = 1;
+            if (gameState.currentLevel >= 3 && accuracy >= 85) stars = 2;
+            if (gameState.currentLevel >= 5 && accuracy >= 95) stars = 3;
+            
+            // 保存最佳成绩
+            const savedStars = parseInt(localStorage.getItem('word-rescue-stars') || 0);
+            if (stars > savedStars) {
+                localStorage.setItem('word-rescue-stars', stars);
+            }
+            
+            // 显示结果
+            document.getElementById('gameArea').style.display = 'none';
+            const resultScreen = document.getElementById('resultScreen');
+            resultScreen.classList.add('show');
+            
+            document.getElementById('finalRescued').textContent = gameState.rescued;
+            document.getElementById('finalLevel').textContent = gameState.currentLevel;
+            document.getElementById('finalAccuracy').textContent = accuracy + '%';
+            document.getElementById('finalErrors').textContent = gameState.totalErrors;
+            
+            // 显示星星
+            const starsHtml = '⭐'.repeat(stars) + '<span style="opacity:0.3">' + '⭐'.repeat(3 - stars) + '</span>';
+            document.getElementById('resultStars').innerHTML = starsHtml;
+        }
+
+        // 更新统计信息
+        function updateStats() {
+            document.getElementById('rescued').textContent = gameState.rescued;
+            document.getElementById('level').textContent = gameState.currentLevel;
+            
+            const accuracy = gameState.totalTyped > 0 ? 
+                ((gameState.totalTyped - gameState.totalErrors) / gameState.totalTyped * 100).toFixed(0) : 100;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+        }
+
+        // 显示反馈消息
+        function showFeedback(message, color) {
+            const feedback = document.getElementById('feedbackMessage');
+            feedback.textContent = message;
+            feedback.style.color = color;
+            feedback.classList.add('show');
+            
+            setTimeout(() => {
+                feedback.classList.remove('show');
+            }, 1000);
+        }
+
+        // 帮助模态框
+        function showHelp() {
+            document.getElementById('helpModal').classList.add('show');
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').classList.remove('show');
+        }
+
+        // 页面加载时的初始化
+        window.addEventListener('load', () => {
+            // 可以在这里添加初始化逻辑
+        });
+    </script>
+</body>
+</html>

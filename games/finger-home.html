@@ -723,6 +723,7 @@
             wrong: 0,
             currentKey: null,
             isPlaying: false,
+            isWaiting: false,  // 防止快速切换
             targetCount: 10
         };
 
@@ -765,6 +766,7 @@
                 wrong: 0,
                 currentKey: null,
                 isPlaying: true,
+                isWaiting: false,  // 初始化等待标志
                 targetCount: 10
             };
 
@@ -801,13 +803,14 @@
 
         // 处理按键
         function handleKeyPress(key) {
-            if (!gameState.isPlaying || !gameState.currentKey) return;
+            if (!gameState.isPlaying || !gameState.currentKey || gameState.isWaiting) return;
 
             const keyElement = document.getElementById(`key-${key}`);
             if (!keyElement) return;
 
             if (key === gameState.currentKey) {
                 // 正确
+                gameState.isWaiting = true;  // 设置等待标志
                 AudioSystem.playCorrect();
                 keyElement.classList.add('pressed');
                 setTimeout(() => keyElement.classList.remove('pressed'), 200);
@@ -822,7 +825,10 @@
                 } else {
                     // 不升级时才显示"太棒了"消息
                     showMessage('✅ 太棒了！');
-                    setTimeout(nextKey, 500);
+                    setTimeout(() => {
+                        gameState.isWaiting = false;  // 重置等待标志
+                        nextKey();
+                    }, 500);
                 }
             } else if (levels[gameState.level].keys.includes(key)) {
                 // 错误
@@ -845,7 +851,10 @@
                 showMessage(`🎉 升级到第 ${gameState.level + 1} 关！`);
                 document.getElementById('levelInfo').textContent = 
                     `🎮 第 ${gameState.level + 1} 关 - ${levels[gameState.level].name}`;
-                setTimeout(nextKey, 2000);
+                setTimeout(() => {
+                    gameState.isWaiting = false;  // 重置等待标志
+                    nextKey();
+                }, 2000);
             } else {
                 completeGame();
             }
