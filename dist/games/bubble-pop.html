@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字母泡泡</title>
+    <link rel="stylesheet" href="../styles/main.css">
+    <style>
+        .game-area {
+            background: linear-gradient(to bottom, #E0F7FF 0%, #B8E6FF 100%);
+            border-radius: 15px;
+            padding: 20px;
+            height: 600px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .bubble {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            cursor: default;
+            animation: float-down linear;
+            box-shadow: 
+                inset -10px -10px 20px rgba(255,255,255,0.5),
+                inset 10px 10px 20px rgba(0,0,0,0.1),
+                0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .bubble::before {
+            content: '';
+            position: absolute;
+            top: 15%;
+            left: 20%;
+            width: 30%;
+            height: 30%;
+            background: rgba(255,255,255,0.6);
+            border-radius: 50%;
+        }
+
+        .bubble.popping {
+            animation: pop 0.3s ease-out forwards;
+        }
+
+        @keyframes float-down {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0;
+            }
+            5% {
+                opacity: 1;
+            }
+            95% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(600px) scale(0.9);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 1em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .control-btn {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+
+        .pause-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .pause-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .pause-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .level-indicator {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .level-indicator h3 {
+            color: #667eea;
+            font-size: 1.3em;
+        }
+
+        .game-over-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+        }
+
+        .game-over-screen.show {
+            display: block;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .game-over-screen h2 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .final-stats {
+            margin: 20px 0;
+            font-size: 1.3em;
+        }
+
+        .final-stats div {
+            margin: 10px 0;
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            animation: particle-float 1s ease-out forwards;
+        }
+
+        @keyframes particle-float {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .level-up-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 
+                0 0 10px rgba(255, 215, 0, 0.8),
+                0 0 20px rgba(255, 215, 0, 0.6),
+                3px 3px 6px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            z-index: 2000;
+            animation: level-up-float 2s ease-out forwards;
+        }
+
+        @keyframes level-up-float {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+            20% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 1;
+            }
+            40% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+            80% {
+                transform: translate(-50%, -70%) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -100%) scale(0.8);
+                opacity: 0;
+            }
+        }
+
+        .help-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 4000;
+        }
+
+        .help-modal.show {
+            display: flex;
+        }
+
+        .help-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .help-content h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        .help-section {
+            margin-bottom: 25px;
+        }
+
+        .help-section h3 {
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .help-section p, .help-section ul {
+            color: #555;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+
+        .help-section ul {
+            margin-left: 20px;
+        }
+
+        .help-section li {
+            margin-bottom: 8px;
+        }
+
+        .star-requirement {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .help-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .help-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .close-help-btn {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 20px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .close-help-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-screen">
+            <div class="game-header">
+                <button class="back-btn" onclick="location.href='../index.html'">⬅️ 返回</button>
+                <h1>🫧 字母泡泡</h1>
+                <button class="help-btn" onclick="showHelp()">❓ 游戏说明</button>
+                <div class="score-display">
+                    <div class="score-item">
+                        <span>⭐</span>
+                        <strong id="score">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="level-indicator">
+                <h3>🎮 关卡 <span id="level">1</span> - 速度: <span id="speed">慢速</span></h3>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <h3>🎯 命中</h3>
+                    <div class="stat-value" id="hits">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>❌ 失误</h3>
+                    <div class="stat-value" id="misses">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>🔥 连击</h3>
+                    <div class="stat-value" id="combo">0</div>
+                </div>
+            </div>
+
+            <div class="game-area" id="gameArea">
+                <!-- 泡泡将在这里生成 -->
+            </div>
+
+            <div class="game-controls">
+                <button class="control-btn start-btn" id="startBtn" onclick="startGame()">开始游戏</button>
+                <button class="control-btn pause-btn" id="pauseBtn" onclick="togglePause()" disabled>暂停</button>
+            </div>
+
+            <div class="game-over-screen" id="gameOverScreen">
+                <h2>🎉 游戏结束</h2>
+                <div class="final-stats">
+                    <div>⭐ 总分: <strong id="finalScore">0</strong></div>
+                    <div>🎯 命中率: <strong id="accuracy">0%</strong></div>
+                    <div>🔥 最高连击: <strong id="maxCombo">0</strong></div>
+                    <div>🏆 关卡: <strong id="finalLevel">1</strong></div>
+                </div>
+                <button class="control-btn start-btn" onclick="restartGame()">再玩一次</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏说明弹窗 -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-content">
+            <h2>🫧 字母泡泡 - 游戏说明</h2>
+            
+            <div class="help-section">
+                <h3>🎮 游戏规则</h3>
+                <p>这是一个训练反应速度和打字准确度的游戏！</p>
+                <ul>
+                    <li>字母泡泡会从天空下落</li>
+                    <li>在泡泡落地前，快速按下泡泡上的字母键</li>
+                    <li>每成功击破一个泡泡得 10 分</li>
+                    <li>泡泡接触地面会减少 1 条生命，生命值为 0 游戏结束</li>
+                    <li>达到分数目标即可升级</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>⭐ 星星获得条件</h3>
+                <div class="star-requirement">⭐ 1星：得分大于 0</div>
+                <div class="star-requirement">⭐⭐ 2星：命中率 70% 以上 或 达到第 3 关</div>
+                <div class="star-requirement">⭐⭐⭐ 3星：命中率 85% 以上 且 达到第 5 关</div>
+            </div>
+
+            <div class="help-section">
+                <h3>💡 小提示</h3>
+                <ul>
+                    <li>关卡越高，泡泡下落速度越快</li>
+                    <li>保持注意力集中，提前预判泡泡位置</li>
+                    <li>准确性比速度更重要</li>
+                </ul>
+            </div>
+
+            <button class="close-help-btn" onclick="closeHelp()">知道了</button>
+        </div>
+    </div>
+
+    <script>
+        // 音效系统
+        const AudioSystem = {
+            context: null,
+            
+            init() {
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            
+            // 播放泡泡消除音效
+            playPop() {
+                if (!this.context) return;
+                
+                const oscillator = this.context.createOscillator();
+                const gainNode = this.context.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.context.destination);
+                
+                oscillator.frequency.setValueAtTime(800, this.context.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(400, this.context.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.1);
+                
+                oscillator.start(this.context.currentTime);
+                oscillator.stop(this.context.currentTime + 0.1);
+            },
+            
+            // 播放连击音效
+            playCombo(comboCount) {
+                if (!this.context) return;
+                
+                const oscillator = this.context.createOscillator();
+                const gainNode = this.context.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.context.destination);
+                
+                const baseFreq = 600 + (comboCount * 50);
+                oscillator.frequency.setValueAtTime(baseFreq, this.context.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, this.context.currentTime + 0.15);
+                
+                gainNode.gain.setValueAtTime(0.25, this.context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.15);
+                
+                oscillator.start(this.context.currentTime);
+                oscillator.stop(this.context.currentTime + 0.15);
+            },
+            
+            // 播放失误音效
+            playMiss() {
+                if (!this.context) return;
+                
+                const oscillator = this.context.createOscillator();
+                const gainNode = this.context.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.context.destination);
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(200, this.context.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(100, this.context.currentTime + 0.2);
+                
+                gainNode.gain.setValueAtTime(0.2, this.context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.2);
+                
+                oscillator.start(this.context.currentTime);
+                oscillator.stop(this.context.currentTime + 0.2);
+            },
+            
+            // 播放升级音效
+            playLevelUp() {
+                if (!this.context) return;
+                
+                const playNote = (freq, startTime, duration) => {
+                    const oscillator = this.context.createOscillator();
+                    const gainNode = this.context.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.context.destination);
+                    
+                    oscillator.frequency.setValueAtTime(freq, startTime);
+                    gainNode.gain.setValueAtTime(0.2, startTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                };
+                
+                // 播放上升音阶
+                const now = this.context.currentTime;
+                playNote(523, now, 0.15);        // C
+                playNote(659, now + 0.1, 0.15);  // E
+                playNote(784, now + 0.2, 0.3);   // G
+            },
+            
+            // 播放游戏结束音效
+            playGameOver() {
+                if (!this.context) return;
+                
+                const oscillator = this.context.createOscillator();
+                const gainNode = this.context.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.context.destination);
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(400, this.context.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(200, this.context.currentTime + 0.5);
+                
+                gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.5);
+                
+                oscillator.start(this.context.currentTime);
+                oscillator.stop(this.context.currentTime + 0.5);
+            }
+        };
+
+        // 游戏状态
+        let gameState = {
+            score: 0,
+            hits: 0,
+            misses: 0,
+            combo: 0,
+            maxCombo: 0,
+            level: 1,
+            isRunning: false,
+            isPaused: false,
+            bubbles: new Map(),
+            nextBubbleId: 0
+        };
+
+        // 游戏配置
+        const config = {
+            letters: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+            colors: [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+            ],
+            baseSpeed: 8000, // 基础下落时间（毫秒）
+            spawnInterval: 2000, // 基础生成间隔
+            speedDecrease: 500 // 每关速度递减
+        };
+
+        let spawnTimer = null;
+
+        // 创建泡泡
+        function createBubble() {
+            if (!gameState.isRunning || gameState.isPaused) return;
+
+            const gameArea = document.getElementById('gameArea');
+            const bubble = document.createElement('div');
+            const bubbleId = gameState.nextBubbleId++;
+            
+            // 随机字母和颜色
+            const letter = config.letters[Math.floor(Math.random() * config.letters.length)];
+            const color = config.colors[Math.floor(Math.random() * config.colors.length)];
+            
+            // 随机水平位置
+            const leftPosition = Math.random() * (gameArea.offsetWidth - 100);
+            
+            // 计算下落速度
+            const fallSpeed = Math.max(3000, config.baseSpeed - (gameState.level - 1) * config.speedDecrease);
+            
+            bubble.className = 'bubble';
+            bubble.textContent = letter;
+            bubble.style.background = color;
+            bubble.style.left = leftPosition + 'px';
+            bubble.style.animationDuration = fallSpeed + 'ms';
+            bubble.dataset.letter = letter;
+            bubble.dataset.id = bubbleId;
+            
+            gameArea.appendChild(bubble);
+            gameState.bubbles.set(bubbleId, { element: bubble, letter: letter });
+            
+            // 泡泡到底后自动移除
+            setTimeout(() => {
+                if (gameState.bubbles.has(bubbleId)) {
+                    bubble.remove();
+                    gameState.bubbles.delete(bubbleId);
+                    missedBubble();
+                }
+            }, fallSpeed);
+        }
+
+        // 消除泡泡
+        function popBubble(letter) {
+            let popped = false;
+            
+            // 找到最低的匹配泡泡
+            let lowestBubble = null;
+            let lowestY = -1;
+            
+            gameState.bubbles.forEach((bubble, id) => {
+                if (bubble.letter === letter) {
+                    const rect = bubble.element.getBoundingClientRect();
+                    if (rect.top > lowestY) {
+                        lowestY = rect.top;
+                        lowestBubble = { id, bubble };
+                    }
+                }
+            });
+            
+            if (lowestBubble) {
+                const { id, bubble } = lowestBubble;
+                
+                // 获取当前位置并固定
+                const rect = bubble.element.getBoundingClientRect();
+                const gameArea = document.getElementById('gameArea');
+                const gameAreaRect = gameArea.getBoundingClientRect();
+                
+                bubble.element.style.animation = 'none';
+                bubble.element.style.top = (rect.top - gameAreaRect.top) + 'px';
+                bubble.element.style.left = (rect.left - gameAreaRect.left) + 'px';
+                
+                // 强制重绘后添加消失动画
+                bubble.element.offsetHeight; // 触发重绘
+                bubble.element.classList.add('popping');
+                
+                // 创建粒子效果
+                createParticles(bubble.element);
+                
+                setTimeout(() => {
+                    bubble.element.remove();
+                    gameState.bubbles.delete(id);
+                }, 300);
+                
+                hitBubble();
+                popped = true;
+            }
+            
+            return popped;
+        }
+
+        // 创建粒子效果
+        function createParticles(element) {
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 8; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.textContent = '✨';
+                particle.style.left = centerX + 'px';
+                particle.style.top = centerY + 'px';
+                particle.style.setProperty('--tx', (Math.random() - 0.5) * 200 + 'px');
+                particle.style.setProperty('--ty', (Math.random() - 0.5) * 200 + 'px');
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 1000);
+            }
+        }
+
+        // 命中泡泡
+        function hitBubble() {
+            gameState.hits++;
+            gameState.combo++;
+            gameState.score += 10 + (gameState.combo > 1 ? gameState.combo * 5 : 0);
+            
+            if (gameState.combo > gameState.maxCombo) {
+                gameState.maxCombo = gameState.combo;
+            }
+            
+            // 播放音效
+            if (gameState.combo > 3) {
+                AudioSystem.playCombo(gameState.combo);
+            } else {
+                AudioSystem.playPop();
+            }
+            
+            updateDisplay();
+            checkLevelUp();
+        }
+
+        // 失误
+        function missedBubble() {
+            gameState.misses++;
+            gameState.combo = 0;
+            AudioSystem.playMiss();
+            updateDisplay();
+            
+            // 失误太多游戏结束
+            if (gameState.misses >= 10) {
+                endGame();
+            }
+        }
+
+        // 检查升级
+        function checkLevelUp() {
+            const newLevel = Math.floor(gameState.hits / 10) + 1;
+            if (newLevel > gameState.level) {
+                gameState.level = newLevel;
+                updateDisplay();
+                showLevelUp();
+            }
+        }
+
+        // 显示升级提示
+        function showLevelUp() {
+            AudioSystem.playLevelUp();
+            const levelUpText = document.createElement('div');
+            levelUpText.className = 'level-up-text';
+            levelUpText.textContent = `🎉 升级到关卡 ${gameState.level}！`;
+            document.body.appendChild(levelUpText);
+            setTimeout(() => levelUpText.remove(), 2000);
+        }
+
+        // 更新显示
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('hits').textContent = gameState.hits;
+            document.getElementById('misses').textContent = gameState.misses;
+            document.getElementById('combo').textContent = gameState.combo;
+            document.getElementById('level').textContent = gameState.level;
+            
+            // 更新速度显示
+            const speedText = gameState.level <= 2 ? '慢速' : 
+                             gameState.level <= 4 ? '中速' : '快速';
+            document.getElementById('speed').textContent = speedText;
+        }
+
+        // 开始游戏
+        function startGame() {
+            // 初始化音效系统
+            if (!AudioSystem.context) {
+                AudioSystem.init();
+            }
+            
+            gameState = {
+                score: 0,
+                hits: 0,
+                misses: 0,
+                combo: 0,
+                maxCombo: 0,
+                level: 1,
+                isRunning: true,
+                isPaused: false,
+                bubbles: new Map(),
+                nextBubbleId: 0
+            };
+            
+            document.getElementById('gameOverScreen').classList.remove('show');
+            document.getElementById('gameArea').innerHTML = '';
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            
+            updateDisplay();
+            
+            // 开始生成泡泡
+            spawnBubbles();
+        }
+
+        // 生成泡泡循环
+        function spawnBubbles() {
+            if (!gameState.isRunning) return;
+            
+            createBubble();
+            
+            const interval = Math.max(1000, config.spawnInterval - (gameState.level - 1) * 200);
+            spawnTimer = setTimeout(spawnBubbles, interval);
+        }
+
+        // 暂停/继续
+        function togglePause() {
+            gameState.isPaused = !gameState.isPaused;
+            const pauseBtn = document.getElementById('pauseBtn');
+            pauseBtn.textContent = gameState.isPaused ? '继续' : '暂停';
+            
+            if (!gameState.isPaused) {
+                spawnBubbles();
+            } else {
+                clearTimeout(spawnTimer);
+            }
+        }
+
+        // 计算星级
+        function calculateStars(accuracy, score, level) {
+            let stars = 0;
+            
+            // 基础星级：完成游戏得1星
+            if (score > 0) stars = 1;
+            
+            // 2星条件：命中率70%以上或达到3关
+            if (accuracy >= 70 || level >= 3) stars = 2;
+            
+            // 3星条件：命中率90%以上且达到5关
+            if (accuracy >= 90 && level >= 5) stars = 3;
+            
+            return stars;
+        }
+
+        // 保存游戏成绩
+        function saveGameProgress(stars, score, accuracy) {
+            const currentBest = localStorage.getItem('bubble-pop-stars') || 0;
+            if (stars > currentBest) {
+                localStorage.setItem('bubble-pop-stars', stars);
+                localStorage.setItem('bubble-pop-score', score);
+                localStorage.setItem('bubble-pop-accuracy', accuracy);
+            }
+        }
+
+        // 结束游戏
+        function endGame() {
+            // 防止重复调用
+            if (!gameState.isRunning) return;
+            
+            gameState.isRunning = false;
+            clearTimeout(spawnTimer);
+            AudioSystem.playGameOver();
+            
+            // 显示结果
+            const accuracy = gameState.hits + gameState.misses > 0 ? 
+                Math.round((gameState.hits / (gameState.hits + gameState.misses)) * 100) : 0;
+            
+            // 计算星级
+            const stars = calculateStars(accuracy, gameState.score, gameState.level);
+            saveGameProgress(stars, gameState.score, accuracy);
+            
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+            document.getElementById('maxCombo').textContent = gameState.maxCombo;
+            document.getElementById('finalLevel').textContent = gameState.level;
+            document.getElementById('gameOverScreen').classList.add('show');
+            
+            // 显示星级
+            showStarRating(stars);
+            
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+        }
+
+        // 显示星级评价
+        function showStarRating(stars) {
+            const finalStats = document.querySelector('.final-stats');
+            
+            // 清除旧的星级显示
+            const oldStarDisplay = finalStats.querySelector('div[style*="font-size: 2em"]');
+            if (oldStarDisplay) oldStarDisplay.remove();
+            
+            const starDisplay = document.createElement('div');
+            starDisplay.style.cssText = 'margin: 20px 0; font-size: 2em;';
+            
+            let starText = '';
+            for (let i = 0; i < 3; i++) {
+                starText += i < stars ? '⭐' : '☆';
+            }
+            
+            starDisplay.innerHTML = `<div>${starText}</div>`;
+            finalStats.appendChild(starDisplay);
+        }
+
+        // 重新开始
+        function restartGame() {
+            // 清除之前的星级显示
+            const finalStats = document.querySelector('.final-stats');
+            const starDisplay = finalStats.querySelector('div[style*="font-size: 2em"]');
+            if (starDisplay) starDisplay.remove();
+            
+            startGame();
+        }
+
+        // 键盘事件
+        document.addEventListener('keydown', (event) => {
+            if (!gameState.isRunning || gameState.isPaused) return;
+            
+            const key = event.key.toUpperCase();
+            if (config.letters.includes(key)) {
+                const success = popBubble(key);
+                if (!success) {
+                    // 按错了键
+                    gameState.combo = 0;
+                    updateDisplay();
+                }
+            }
+        });
+
+        // 显示帮助弹窗
+        function showHelp() {
+            document.getElementById('helpModal').classList.add('show');
+        }
+
+        // 关闭帮助弹窗
+        function closeHelp() {
+            document.getElementById('helpModal').classList.remove('show');
+        }
+
+        // 点击弹窗外部关闭
+        document.getElementById('helpModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHelp();
+            }
+        });
+    </script>
+</body>
+</html>

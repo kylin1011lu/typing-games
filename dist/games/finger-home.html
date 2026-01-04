@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小手找家</title>
+    <link rel="stylesheet" href="../styles/main.css">
+    <style>
+        .game-area {
+            background: linear-gradient(to bottom, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 40px;
+            min-height: 500px;
+            position: relative;
+        }
+
+        .instruction-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .instruction-panel h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .hand-visual {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            gap: 40px;
+        }
+
+        .hand {
+            flex: 1;
+            text-align: center;
+        }
+
+        .hand-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: white;
+        }
+
+        .fingers {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .finger {
+            width: 60px;
+            text-align: center;
+        }
+
+        .finger-icon {
+            font-size: 3em;
+            margin-bottom: 5px;
+            transition: transform 0.3s ease;
+        }
+
+        .finger.active .finger-icon {
+            transform: scale(1.3);
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+        }
+
+        .finger-name {
+            font-size: 0.9em;
+            color: white;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 5px;
+            border-radius: 5px;
+        }
+
+        .keyboard-display {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .key-display {
+            width: 55px;
+            height: 55px;
+            border: 3px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.3em;
+            position: relative;
+            transition: all 0.3s ease;
+            background: #f8f8f8;
+        }
+
+        .key-display.home-key::after {
+            content: '•';
+            position: absolute;
+            bottom: -10px;
+            font-size: 1.5em;
+            color: #666;
+        }
+
+        .key-display.highlight {
+            transform: scale(1.15);
+            border-width: 4px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            animation: pulse-key 1.5s infinite;
+        }
+
+        @keyframes pulse-key {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 0, 0, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(0, 0, 0, 0.5); }
+        }
+
+        .key-display.pressed {
+            transform: scale(0.95);
+            background: #90EE90;
+        }
+
+        .key-display.wrong {
+            background: #ffcccb;
+            animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* 手指颜色 */
+        .finger-pink { color: #FFB6C1; }
+        .finger-ring { color: #DDA0DD; }
+        .finger-middle { color: #87CEEB; }
+        .finger-index { color: #98FB98; }
+        .finger-thumb { color: #FFD700; }
+
+        .color-pink { background: #FFB6C1 !important; border-color: #FF69B4 !important; }
+        .color-ring { background: #DDA0DD !important; border-color: #DA70D6 !important; }
+        .color-middle { background: #87CEEB !important; border-color: #4682B4 !important; }
+        .color-index { background: #98FB98 !important; border-color: #32CD32 !important; }
+        .color-thumb { background: #FFD700 !important; border-color: #FFA500 !important; }
+
+        .progress-display {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+        }
+
+        .progress-item {
+            text-align: center;
+        }
+
+        .progress-item h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .progress-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .level-info {
+            text-align: center;
+            color: white;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .success-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+            z-index: 2000;
+            animation: success-float 1s ease-out forwards;
+        }
+
+        @keyframes success-float {
+            0% {
+                transform: translate(-50%, -50%) scale(0.5);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -70%) scale(1);
+                opacity: 0;
+            }
+        }
+
+        .completion-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+
+        .completion-screen.show {
+            display: flex;
+        }
+
+        .completion-content {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+        }
+
+        .completion-content h2 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .stars-display {
+            font-size: 3em;
+            margin: 20px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .help-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 4000;
+        }
+
+        .help-modal.show {
+            display: flex;
+        }
+
+        .help-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .help-content h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        .help-section {
+            margin-bottom: 25px;
+        }
+
+        .help-section h3 {
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .help-section p, .help-section ul {
+            color: #555;
+            line-height: 1.8;
+            font-size: 1.05em;
+        }
+
+        .help-section ul {
+            margin-left: 20px;
+        }
+
+        .help-section li {
+            margin-bottom: 8px;
+        }
+
+        .star-requirement {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+
+        .help-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .help-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .close-help-btn {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-top: 20px;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .close-help-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-screen">
+            <div class="game-header">
+                <button class="back-btn" onclick="location.href='../index.html'">⬅️ 返回</button>
+                <h1>👋 小手找家</h1>
+                <button class="help-btn" onclick="showHelp()">❓ 游戏说明</button>
+                <div class="score-display">
+                    <div class="score-item">
+                        <span>🎯</span>
+                        <strong id="score">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instruction-panel">
+                <h2>📚 学习正确的手指位置</h2>
+                <p>把手指放在基准键上（F和J有小凸起），每个手指负责不同的按键！</p>
+            </div>
+
+            <div class="game-area">
+                <div class="level-info" id="levelInfo">
+                    🎮 第 1 关 - 练习基准键位
+                </div>
+
+                <div class="hand-visual">
+                    <div class="hand">
+                        <div class="hand-title">🤚 左手</div>
+                        <div class="fingers">
+                            <div class="finger" data-finger="left-pinky">
+                                <div class="finger-icon finger-pink">🤙</div>
+                                <div class="finger-name">小指</div>
+                            </div>
+                            <div class="finger" data-finger="left-ring">
+                                <div class="finger-icon finger-ring">💍</div>
+                                <div class="finger-name">无名指</div>
+                            </div>
+                            <div class="finger" data-finger="left-middle">
+                                <div class="finger-icon finger-middle">🖕</div>
+                                <div class="finger-name">中指</div>
+                            </div>
+                            <div class="finger" data-finger="left-index">
+                                <div class="finger-icon finger-index">☝️</div>
+                                <div class="finger-name">食指</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hand">
+                        <div class="hand-title">🖐️ 右手</div>
+                        <div class="fingers">
+                            <div class="finger" data-finger="right-index">
+                                <div class="finger-icon finger-index">☝️</div>
+                                <div class="finger-name">食指</div>
+                            </div>
+                            <div class="finger" data-finger="right-middle">
+                                <div class="finger-icon finger-middle">🖕</div>
+                                <div class="finger-name">中指</div>
+                            </div>
+                            <div class="finger" data-finger="right-ring">
+                                <div class="finger-icon finger-ring">💍</div>
+                                <div class="finger-name">无名指</div>
+                            </div>
+                            <div class="finger" data-finger="right-pinky">
+                                <div class="finger-icon finger-pink">🤙</div>
+                                <div class="finger-name">小指</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="keyboard-display">
+                    <div class="keyboard-row" id="row1"></div>
+                    <div class="keyboard-row" id="row2"></div>
+                    <div class="keyboard-row" id="row3"></div>
+                </div>
+            </div>
+
+            <div class="progress-display">
+                <div class="progress-item">
+                    <h3>✅ 正确</h3>
+                    <div class="progress-value" id="correct">0</div>
+                </div>
+                <div class="progress-item">
+                    <h3>❌ 错误</h3>
+                    <div class="progress-value" id="wrong">0</div>
+                </div>
+                <div class="progress-item">
+                    <h3>📊 准确率</h3>
+                    <div class="progress-value" id="accuracy">100%</div>
+                </div>
+            </div>
+
+            <div class="control-buttons">
+                <button class="btn btn-primary" onclick="startGame()">开始练习</button>
+                <button class="btn btn-secondary" onclick="location.href='../index.html'">返回主页</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="completion-screen" id="completionScreen">
+        <div class="completion-content">
+            <h2>🎉 恭喜完成！</h2>
+            <div class="stars-display" id="starsDisplay"></div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div>🎯 总分</div>
+                    <div style="font-size: 1.5em; font-weight: bold;" id="finalScore">0</div>
+                </div>
+                <div class="stat-box">
+                    <div>📊 准确率</div>
+                    <div style="font-size: 1.5em; font-weight: bold;" id="finalAccuracy">0%</div>
+                </div>
+                <div class="stat-box">
+                    <div>✅ 正确次数</div>
+                    <div style="font-size: 1.5em; font-weight: bold;" id="finalCorrect">0</div>
+                </div>
+                <div class="stat-box">
+                    <div>🏆 关卡</div>
+                    <div style="font-size: 1.5em; font-weight: bold;" id="finalLevel">1</div>
+                </div>
+            </div>
+            <div class="control-buttons">
+                <button class="btn btn-primary" onclick="restartGame()">再玩一次</button>
+                <button class="btn btn-secondary" onclick="location.href='../index.html'">返回主页</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏说明弹窗 -->
+    <div class="help-modal" id="helpModal">
+        <div class="help-content">
+            <h2>👋 小手找家 - 游戏说明</h2>
+            
+            <div class="help-section">
+                <h3>🎮 游戏规则</h3>
+                <p>这个游戏帮助你掌握标准的键盘指法！</p>
+                <ul>
+                    <li>键盘上的每个字母都有对应的手指负责</li>
+                    <li>屏幕会显示需要按的字母，用正确的手指按下</li>
+                    <li>正确后会显示手指高亮和动画反馈</li>
+                    <li>游戏分为 5 个级别，逐渐增加难度</li>
+                    <li>没有时间限制，放松地学习吧！</li>
+                </ul>
+            </div>
+
+            <div class="help-section">
+                <h3>⭐ 星星获得条件</h3>
+                <div class="star-requirement">⭐ 1星：正确按键 10 次以上</div>
+                <div class="star-requirement">⭐⭐ 2星：准确率 85% 以上 且 正确 25 次以上</div>
+                <div class="star-requirement">⭐⭐⭐ 3星：准确率 95% 以上 且 正确 40 次以上</div>
+            </div>
+
+            <div class="help-section">
+                <h3>💡 小提示</h3>
+                <ul>
+                    <li>观察上方的手指图，了解每个手指的负责区域</li>
+                    <li>保持正确的手型，不要乱动手指</li>
+                    <li>熟练后尝试不看键盘盲打</li>
+                </ul>
+            </div>
+
+            <button class="close-help-btn" onclick="closeHelp()">知道了</button>
+        </div>
+    </div>
+
+    <script>
+        // 音效系统
+        const AudioSystem = {
+            context: null,
+            
+            init() {
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            
+            playCorrect() {
+                if (!this.context) return;
+                
+                const oscillator = this.context.createOscillator();
+                const gainNode = this.context.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.context.destination);
+                
+                oscillator.frequency.setValueAtTime(600, this.context.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(800, this.context.currentTime + 0.1);
+                
+                gainNode.gain.setValueAtTime(0.3, this.context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.1);
+                
+                oscillator.start(this.context.currentTime);
+                oscillator.stop(this.context.currentTime + 0.1);
+            },
+            
+            playWrong() {
+                if (!this.context) return;
+                
+                const oscillator = this.context.createOscillator();
+                const gainNode = this.context.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.context.destination);
+                
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(200, this.context.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(100, this.context.currentTime + 0.2);
+                
+                gainNode.gain.setValueAtTime(0.15, this.context.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.2);
+                
+                oscillator.start(this.context.currentTime);
+                oscillator.stop(this.context.currentTime + 0.2);
+            },
+            
+            playLevelUp() {
+                if (!this.context) return;
+                
+                const playNote = (freq, startTime, duration) => {
+                    const oscillator = this.context.createOscillator();
+                    const gainNode = this.context.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.context.destination);
+                    
+                    oscillator.frequency.setValueAtTime(freq, startTime);
+                    gainNode.gain.setValueAtTime(0.2, startTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                };
+                
+                const now = this.context.currentTime;
+                playNote(523, now, 0.15);
+                playNote(659, now + 0.1, 0.15);
+                playNote(784, now + 0.2, 0.3);
+            },
+            
+            playComplete() {
+                if (!this.context) return;
+                
+                const playNote = (freq, startTime, duration) => {
+                    const oscillator = this.context.createOscillator();
+                    const gainNode = this.context.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.context.destination);
+                    
+                    oscillator.frequency.setValueAtTime(freq, startTime);
+                    gainNode.gain.setValueAtTime(0.25, startTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    
+                    oscillator.start(startTime);
+                    oscillator.stop(startTime + duration);
+                };
+                
+                const now = this.context.currentTime;
+                playNote(523, now, 0.2);
+                playNote(659, now + 0.15, 0.2);
+                playNote(784, now + 0.3, 0.2);
+                playNote(1047, now + 0.45, 0.4);
+            }
+        };
+
+        // 键盘布局和手指映射
+        const keyboardLayout = {
+            row1: ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+            row2: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+            row3: ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
+        };
+
+        const fingerMapping = {
+            'A': { finger: 'left-pinky', color: 'pink' },
+            'S': { finger: 'left-ring', color: 'ring' },
+            'D': { finger: 'left-middle', color: 'middle' },
+            'F': { finger: 'left-index', color: 'index' },
+            'G': { finger: 'left-index', color: 'index' },
+            'H': { finger: 'right-index', color: 'index' },
+            'J': { finger: 'right-index', color: 'index' },
+            'K': { finger: 'right-middle', color: 'middle' },
+            'L': { finger: 'right-ring', color: 'ring' },
+            'Q': { finger: 'left-pinky', color: 'pink' },
+            'W': { finger: 'left-ring', color: 'ring' },
+            'E': { finger: 'left-middle', color: 'middle' },
+            'R': { finger: 'left-index', color: 'index' },
+            'T': { finger: 'left-index', color: 'index' },
+            'Y': { finger: 'right-index', color: 'index' },
+            'U': { finger: 'right-index', color: 'index' },
+            'I': { finger: 'right-middle', color: 'middle' },
+            'O': { finger: 'right-ring', color: 'ring' },
+            'P': { finger: 'right-pinky', color: 'pink' },
+            'Z': { finger: 'left-pinky', color: 'pink' },
+            'X': { finger: 'left-ring', color: 'ring' },
+            'C': { finger: 'left-middle', color: 'middle' },
+            'V': { finger: 'left-index', color: 'index' },
+            'B': { finger: 'left-index', color: 'index' },
+            'N': { finger: 'right-index', color: 'index' },
+            'M': { finger: 'right-index', color: 'index' }
+        };
+
+        // 练习关卡
+        const levels = [
+            { name: '基准键位', keys: ['F', 'J'] },
+            { name: '主键盘行', keys: ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'] },
+            { name: '上排键位', keys: ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'] },
+            { name: '下排键位', keys: ['Z', 'X', 'C', 'V', 'B', 'N', 'M'] },
+            { name: '综合练习', keys: Object.keys(fingerMapping) }
+        ];
+
+        // 游戏状态
+        let gameState = {
+            level: 0,
+            score: 0,
+            correct: 0,
+            wrong: 0,
+            currentKey: null,
+            isPlaying: false,
+            isWaiting: false,  // 防止快速切换
+            targetCount: 10
+        };
+
+        // 初始化键盘显示
+        function initKeyboard() {
+            ['row1', 'row2', 'row3'].forEach((rowId, index) => {
+                const row = document.getElementById(rowId);
+                const keys = keyboardLayout[rowId];
+                
+                keys.forEach(key => {
+                    const keyDiv = document.createElement('div');
+                    keyDiv.className = 'key-display';
+                    keyDiv.textContent = key;
+                    keyDiv.id = `key-${key}`;
+                    
+                    if (fingerMapping[key]) {
+                        keyDiv.classList.add(`color-${fingerMapping[key].color}`);
+                    }
+                    
+                    // 标记基准键
+                    if (key === 'F' || key === 'J') {
+                        keyDiv.classList.add('home-key');
+                    }
+                    
+                    row.appendChild(keyDiv);
+                });
+            });
+        }
+
+        // 开始游戏
+        function startGame() {
+            if (!AudioSystem.context) {
+                AudioSystem.init();
+            }
+
+            gameState = {
+                level: 0,
+                score: 0,
+                correct: 0,
+                wrong: 0,
+                currentKey: null,
+                isPlaying: true,
+                isWaiting: false,  // 初始化等待标志
+                targetCount: 10
+            };
+
+            updateDisplay();
+            nextKey();
+        }
+
+        // 下一个按键
+        function nextKey() {
+            if (!gameState.isPlaying) return;
+
+            // 清除高亮
+            document.querySelectorAll('.key-display').forEach(k => k.classList.remove('highlight'));
+            document.querySelectorAll('.finger').forEach(f => f.classList.remove('active'));
+
+            const levelKeys = levels[gameState.level].keys;
+            gameState.currentKey = levelKeys[Math.floor(Math.random() * levelKeys.length)];
+
+            // 高亮按键
+            const keyElement = document.getElementById(`key-${gameState.currentKey}`);
+            if (keyElement) {
+                keyElement.classList.add('highlight');
+            }
+
+            // 高亮手指
+            const fingerInfo = fingerMapping[gameState.currentKey];
+            if (fingerInfo) {
+                const finger = document.querySelector(`[data-finger="${fingerInfo.finger}"]`);
+                if (finger) {
+                    finger.classList.add('active');
+                }
+            }
+        }
+
+        // 处理按键
+        function handleKeyPress(key) {
+            if (!gameState.isPlaying || !gameState.currentKey || gameState.isWaiting) return;
+
+            const keyElement = document.getElementById(`key-${key}`);
+            if (!keyElement) return;
+
+            if (key === gameState.currentKey) {
+                // 正确
+                gameState.isWaiting = true;  // 设置等待标志
+                AudioSystem.playCorrect();
+                keyElement.classList.add('pressed');
+                setTimeout(() => keyElement.classList.remove('pressed'), 200);
+
+                gameState.correct++;
+                gameState.score += 10;
+
+                // 检查是否升级
+                if (gameState.correct >= gameState.targetCount * (gameState.level + 1)) {
+                    // 即将升级，不显示"太棒了"消息，直接升级
+                    levelUp();
+                } else {
+                    // 不升级时才显示"太棒了"消息
+                    showMessage('✅ 太棒了！');
+                    setTimeout(() => {
+                        gameState.isWaiting = false;  // 重置等待标志
+                        nextKey();
+                    }, 500);
+                }
+            } else if (levels[gameState.level].keys.includes(key)) {
+                // 错误
+                AudioSystem.playWrong();
+                keyElement.classList.add('wrong');
+                setTimeout(() => keyElement.classList.remove('wrong'), 300);
+
+                gameState.wrong++;
+                showMessage('❌ 用对手指哦！');
+            }
+
+            updateDisplay();
+        }
+
+        // 升级
+        function levelUp() {
+            if (gameState.level < levels.length - 1) {
+                gameState.level++;
+                AudioSystem.playLevelUp();
+                showMessage(`🎉 升级到第 ${gameState.level + 1} 关！`);
+                document.getElementById('levelInfo').textContent = 
+                    `🎮 第 ${gameState.level + 1} 关 - ${levels[gameState.level].name}`;
+                setTimeout(() => {
+                    gameState.isWaiting = false;  // 重置等待标志
+                    nextKey();
+                }, 2000);
+            } else {
+                completeGame();
+            }
+        }
+
+        // 完成游戏
+        function completeGame() {
+            gameState.isPlaying = false;
+            AudioSystem.playComplete();
+
+            const accuracy = Math.round((gameState.correct / (gameState.correct + gameState.wrong)) * 100);
+            const stars = calculateStars(accuracy, gameState.correct);
+            saveProgress(stars, gameState.score, accuracy);
+
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalAccuracy').textContent = accuracy + '%';
+            document.getElementById('finalCorrect').textContent = gameState.correct;
+            document.getElementById('finalLevel').textContent = gameState.level + 1;
+
+            let starsHTML = '';
+            for (let i = 0; i < 3; i++) {
+                starsHTML += i < stars ? '⭐' : '☆';
+            }
+            document.getElementById('starsDisplay').textContent = starsHTML;
+
+            document.getElementById('completionScreen').classList.add('show');
+        }
+
+        // 计算星级
+        function calculateStars(accuracy, correct) {
+            if (accuracy >= 95 && correct >= 40) return 3;
+            if (accuracy >= 85 && correct >= 25) return 2;
+            if (correct >= 10) return 1;
+            return 0;
+        }
+
+        // 保存进度
+        function saveProgress(stars, score, accuracy) {
+            const currentBest = localStorage.getItem('finger-home-stars') || 0;
+            if (stars > currentBest) {
+                localStorage.setItem('finger-home-stars', stars);
+                localStorage.setItem('finger-home-score', score);
+                localStorage.setItem('finger-home-accuracy', accuracy);
+            }
+        }
+
+        // 显示消息
+        function showMessage(text) {
+            const message = document.createElement('div');
+            message.className = 'success-message';
+            message.textContent = text;
+            document.body.appendChild(message);
+            setTimeout(() => message.remove(), 1000);
+        }
+
+        // 更新显示
+        function updateDisplay() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('correct').textContent = gameState.correct;
+            document.getElementById('wrong').textContent = gameState.wrong;
+            
+            const accuracy = gameState.correct + gameState.wrong > 0 ?
+                Math.round((gameState.correct / (gameState.correct + gameState.wrong)) * 100) : 100;
+            document.getElementById('accuracy').textContent = accuracy + '%';
+        }
+
+        // 重新开始
+        function restartGame() {
+            document.getElementById('completionScreen').classList.remove('show');
+            startGame();
+        }
+
+        // 键盘事件
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toUpperCase();
+            if (key.length === 1 && key.match(/[A-Z]/)) {
+                handleKeyPress(key);
+            }
+        });
+
+        // 初始化
+        initKeyboard();
+        nextLetter();
+
+        // 显示帮助弹窗
+        function showHelp() {
+            document.getElementById('helpModal').classList.add('show');
+        }
+
+        // 关闭帮助弹窗
+        function closeHelp() {
+            document.getElementById('helpModal').classList.remove('show');
+        }
+
+        // 点击弹窗外部关闭
+        document.getElementById('helpModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHelp();
+            }
+        });
+    </script>
+</body>
+</html>
