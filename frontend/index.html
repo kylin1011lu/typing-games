@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>打字游戏 </title>
+    <title>打字游戏</title>
     <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
@@ -94,7 +94,7 @@
                     <button class="play-btn">开始游戏</button>
                 </div>
 
-                <div class="game-card" style="opacity: 0.5; cursor: not-allowed;" onclick="alert('敬请期待！')">
+                <div class="game-card" onclick="location.href='games/typing-racer.html'">
                     <div class="game-icon">🏎️</div>
                     <h3>打字赛车</h3>
                     <p>输入单词让赛车飞驰</p>
@@ -103,7 +103,7 @@
                         <span class="star empty">⭐</span>
                         <span class="star empty">⭐</span>
                     </div>
-                    <button class="play-btn">敬请期待</button>
+                    <button class="play-btn">开始游戏</button>
                 </div>
             </div>
 
@@ -144,9 +144,13 @@
             const wordStars = parseInt(localStorage.getItem('word-rescue-stars') || 0);
             updateStarDisplay('word-rescue', wordStars);
             
+            // 加载打字赛车星级
+            const racerStars = parseInt(localStorage.getItem('typing-racer-stars') || 0);
+            updateStarDisplay('typing-racer', racerStars);
+            
             // 计算总进度
-            const totalStars = farmStars + bubbleStars + fingerStars + musicStars + wordStars;
-            const maxStars = 15; // 五个游戏，每个最多3星
+            const totalStars = farmStars + bubbleStars + fingerStars + musicStars + wordStars + racerStars;
+            const maxStars = 18; // 六个游戏，每个最多3星
             const progress = Math.round((totalStars / maxStars) * 100);
             
             document.querySelector('.progress-fill').style.width = progress + '%';
@@ -167,8 +171,10 @@
                 targetCard = gameCards[2];
             } else if (gameId === 'music-jump') {
                 targetCard = gameCards[3];
-            }else if (gameId === 'word-rescue') {
+            } else if (gameId === 'word-rescue') {
                 targetCard = gameCards[4];
+            } else if (gameId === 'typing-racer') {
+                targetCard = gameCards[5];
             }
             
             if (targetCard) {
