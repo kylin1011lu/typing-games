@@ -353,7 +353,7 @@ body {
 .connection-status {
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 20px;
     background: white;
     padding: 10px 20px;
     border-radius: 25px;
@@ -388,6 +388,46 @@ body {
     }
 }
 
+/* 音效控制 */
+.audio-controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    padding: 10px 15px;
+    border-radius: 25px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 1000;
+}
+
+.audio-btn {
+    background: #f8f9fa;
+    border: 2px solid #667eea;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.audio-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.audio-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #5568d3;
+}
+
 /* ============ 游戏视图样式 ============ */
 .view-container {
     min-height: 100vh;
@@ -409,6 +449,7 @@ body {
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
 }
 
 .game-info-left {
@@ -437,7 +478,8 @@ body {
 .game-info-right {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .game-status {
@@ -532,6 +574,24 @@ body {
     background: #c82333;
 }
 
+.btn-invite {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-invite:hover {
+    background: #138496;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+}
+
 /* 倒计时遮罩 */
 .countdown-overlay {
     position: fixed;
@@ -591,6 +651,17 @@ body {
     gap: 15px;
 }
 
+/* 2列布局（4-6人时） */
+.race-track.two-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.race-track.two-columns .lane {
+    min-height: 100px;
+}
+
 .lane {
     position: relative;
     height: 100px;
@@ -598,6 +669,11 @@ body {
     border-radius: 10px;
     border: 5px solid #333;
     overflow: hidden;
+}
+
+.lane.my-lane {
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
 }
 
 .lane.offline {
@@ -764,6 +840,7 @@ body {
     border-radius: 15px;
     padding: 25px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
 }
 
 .word-display {

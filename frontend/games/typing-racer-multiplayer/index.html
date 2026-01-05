@@ -90,6 +90,16 @@
                 <span class="status-dot"></span>
                 <span class="status-text">连接中...</span>
             </div>
+
+            <!-- 音效控制 -->
+            <div class="audio-controls" id="audioControls">
+                <button class="audio-btn" onclick="toggleMute()" id="muteBtn" title="静音/取消静音">
+                    🔊
+                </button>
+                <button class="audio-btn bgm-btn" onclick="toggleBGM()" id="bgmBtn" title="背景音乐">
+                    🎵
+                </button>
+            </div>
         </div>
 
         <!-- 游戏视图 -->
@@ -101,6 +111,7 @@
                     <span class="room-code-badge">房间号: <strong id="gameRoomCode">------</strong></span>
                 </div>
                 <div class="game-info-right">
+                    <button id="inviteBtn" class="btn-invite" onclick="copyInviteLink()" title="复制邀请链接">📤 邀请</button>
                     <span id="gameStatus" class="game-status waiting">⏳ 等待玩家...</span>
                     <button id="readyBtn" class="btn-ready" onclick="toggleReady()" style="display: none;">准备</button>
                     <button id="startBtn" class="btn-start" onclick="startGame()" style="display: none;">开始游戏</button>
@@ -163,6 +174,188 @@
         </div>
     </div>
 
+    <!-- 音效系统 -->
+    <script>
+        // 16-bit 音效系统
+        const AudioEngine = {
+            audioContext: null,
+            isMuted: false,
+
+            init() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Web Audio API not supported');
+                }
+            },
+
+            // 播放音效
+            playTone(frequency, duration, type = 'square', volume = 0.1) {
+                if (this.isMuted || !this.audioContext) return;
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                oscillator.type = type;
+                oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+
+                gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + duration);
+            },
+
+            // 音效集合
+            sfx: {
+                click: function() {
+                    AudioEngine.playTone(800, 0.05, 'square', 0.05);
+                },
+                correct: function() {
+                    AudioEngine.playTone(523, 0.1, 'square', 0.1);
+                    setTimeout(() => AudioEngine.playTone(659, 0.1, 'square', 0.1), 50);
+                    setTimeout(() => AudioEngine.playTone(784, 0.15, 'square', 0.1), 100);
+                },
+                wrong: function() {
+                    AudioEngine.playTone(200, 0.2, 'sawtooth', 0.15);
+                    setTimeout(() => AudioEngine.playTone(150, 0.3, 'sawtooth', 0.1), 100);
+                },
+                countdown: function(count) {
+                    AudioEngine.playTone(440, 0.1, 'square', 0.15);
+                },
+                go: function() {
+                    AudioEngine.playTone(523, 0.15, 'square', 0.2);
+                    setTimeout(() => AudioEngine.playTone(659, 0.15, 'square', 0.2), 100);
+                    setTimeout(() => AudioEngine.playTone(784, 0.2, 'square', 0.2), 200);
+                },
+                carMove: function() {
+                    AudioEngine.playTone(100, 0.03, 'triangle', 0.05);
+                },
+                finish: function() {
+                    const notes = [523, 587, 659, 784, 659, 784, 1047];
+                    notes.forEach((freq, i) => {
+                        setTimeout(() => AudioEngine.playTone(freq, 0.2, 'square', 0.15), i * 100);
+                    });
+                },
+                join: function() {
+                    AudioEngine.playTone(392, 0.1, 'square', 0.1);
+                    setTimeout(() => AudioEngine.playTone(523, 0.15, 'square', 0.1), 75);
+                },
+                ready: function() {
+                    AudioEngine.playTone(440, 0.1, 'square', 0.1);
+                },
+                win: function() {
+                    const notes = [784, 988, 1175, 988, 784];
+                    notes.forEach((freq, i) => {
+                        setTimeout(() => AudioEngine.playTone(freq, 0.15, 'square', 0.2), i * 120);
+                    });
+                }
+            },
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                return this.isMuted;
+            }
+        };
+
+        // BGM 背景音乐系统
+        const BGMPlayer = {
+            audioContext: null,
+            isPlaying: false,
+            currentPattern: 0,
+            tempo: 150, // BPM
+            scheduler: null,
+
+            init() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.warn('Web Audio API not supported');
+                }
+            },
+
+            // 简单的赛车游戏背景旋律
+            melody: [
+                [262, 0, 262, 0, 330, 0, 392, 0], // C4, C4, E4, G4
+                [349, 0, 349, 0, 440, 0, 523, 0], // F4, F4, A4, C5
+                [392, 0, 330, 0, 294, 0, 330, 0], // G4, E4, D4, E4
+                [262, 0, 330, 0, 392, 0, 440, 0], // C4, E4, G4, A4
+            ],
+
+            playNote(frequency, duration = 0.2, volume = 0.03) {
+                if (!this.audioContext) return;
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+
+                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.02);
+                gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + duration);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + duration);
+            },
+
+            start() {
+                if (this.isPlaying || !this.audioContext) return;
+                this.isPlaying = true;
+                this.playNextNote();
+                this.scheduler();
+            },
+
+            stop() {
+                this.isPlaying = false;
+                if (this.scheduler) {
+                    clearTimeout(this.scheduler);
+                }
+            },
+
+            playNextNote() {
+                if (!this.isPlaying) return;
+
+                const pattern = this.melody[this.currentPattern];
+                let noteIndex = 0;
+
+                const playPattern = () => {
+                    if (!this.isPlaying) return;
+
+                    if (noteIndex < pattern.length) {
+                        const freq = pattern[noteIndex];
+                        if (freq > 0) {
+                            this.playNote(freq, 0.15, 0.02);
+                        }
+                        noteIndex++;
+                        setTimeout(playPattern, 60000 / this.tempo);
+                    } else {
+                        this.currentPattern = (this.currentPattern + 1) % this.melody.length;
+                        this.playNextNote();
+                    }
+                };
+
+                playPattern();
+            },
+
+            scheduler() {
+                if (!this.isPlaying) return;
+                // 4拍后进入下一个小节
+                setTimeout(() => {
+                    if (this.isPlaying) {
+                        this.scheduler();
+                    }
+                }, 240000 / this.tempo);
+            }
+        };
+    </script>
+
     <!-- Socket.io 客户端 -->
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
     <script>
@@ -183,14 +376,31 @@
 
         // ============ 页面加载 ============
         window.addEventListener('DOMContentLoaded', () => {
+            // 初始化音频引擎
+            AudioEngine.init();
+            BGMPlayer.init();
+
+            // 检查是否有邀请链接
+            const autoJoinRoom = checkAutoJoin();
+
             currentNickname = localStorage.getItem('nickname');
             if (currentNickname) {
                 document.getElementById('displayNickname').textContent = currentNickname;
                 document.getElementById('userInfo').style.display = 'flex';
-                connectToServer();
+                connectToServer(autoJoinRoom);
             } else {
                 showNicknameModal();
             }
+
+            // 用户首次交互后恢复AudioContext（浏览器策略）
+            document.addEventListener('click', () => {
+                if (AudioEngine.audioContext && AudioEngine.audioContext.state === 'suspended') {
+                    AudioEngine.audioContext.resume();
+                }
+                if (BGMPlayer.audioContext && BGMPlayer.audioContext.state === 'suspended') {
+                    BGMPlayer.audioContext.resume();
+                }
+            }, { once: true });
         });
 
         // ============ 昵称管理 ============
@@ -220,8 +430,26 @@
             showNicknameModal();
         }
 
+        // ============ 音效控制 ============
+        function toggleMute() {
+            const isMuted = AudioEngine.toggleMute();
+            const btn = document.getElementById('muteBtn');
+            btn.textContent = isMuted ? '🔇' : '🔊';
+        }
+
+        function toggleBGM() {
+            const btn = document.getElementById('bgmBtn');
+            if (BGMPlayer.isPlaying) {
+                BGMPlayer.stop();
+                btn.classList.remove('active');
+            } else {
+                BGMPlayer.start();
+                btn.classList.add('active');
+            }
+        }
+
         // ============ Socket连接 ============
-        function connectToServer() {
+        function connectToServer(autoJoinRoomId = null) {
             const serverUrl = 'http://localhost:3000';
             socket = io(serverUrl);
 
@@ -230,6 +458,17 @@
                 console.log('✅ 已连接到服务器, ID:', myPlayerId);
                 updateConnectionStatus('已连接', true);
                 refreshRoomList();
+
+                // 如果有邀请链接，自动加入房间
+                if (autoJoinRoomId) {
+                    console.log('自动加入房间:', autoJoinRoomId);
+                    setTimeout(() => {
+                        joinRoom(autoJoinRoomId);
+                        // 清除URL参数，避免重复加入
+                        const newUrl = window.location.href.split('?')[0];
+                        window.history.replaceState({}, '', newUrl);
+                    }, 500);
+                }
             });
 
             socket.on('disconnect', () => {
@@ -264,6 +503,7 @@
                 currentRoomId = data.roomId;
                 currentRoom = data.room;
                 isHost = true;
+                AudioEngine.sfx.join();
                 switchToGameView();
             });
 
@@ -271,6 +511,7 @@
             socket.on('PLAYER_JOINED', (data) => {
                 console.log('👤 玩家加入:', data.player.nickname);
                 currentRoom = data.room;
+                AudioEngine.sfx.join();
                 updateGameDisplay();
             });
 
@@ -291,13 +532,18 @@
             socket.on('PLAYER_READY_CHANGED', (data) => {
                 console.log('✅ 玩家准备状态变化:', data.playerId, data.ready);
                 currentRoom = data.room;
-                
+
+                // 播放准备音效（其他人准备时）
+                if (data.playerId !== myPlayerId && data.ready) {
+                    AudioEngine.sfx.ready();
+                }
+
                 // 更新当前玩家的准备状态
                 const currentPlayer = currentRoom.players.find(p => p.playerId === myPlayerId);
                 if (currentPlayer) {
                     isReady = currentPlayer.ready;
                 }
-                
+
                 // 重新渲染界面
                 updateGameStatus();
                 createRaceTracks();
@@ -306,6 +552,7 @@
             // 监听游戏开始倒计时
             socket.on('GAME_COUNTDOWN', (data) => {
                 console.log('⏰ 游戏即将开始, 倒计时:', data.countdown);
+                AudioEngine.sfx.countdown();
                 showCountdown(data.countdown);
             });
 
@@ -612,25 +859,30 @@
             const readyBtn = document.getElementById('readyBtn');
             const startBtn = document.getElementById('startBtn');
             const leaveBtn = document.querySelector('.btn-leave');
+            const inviteBtn = document.getElementById('inviteBtn');
 
             if (currentRoom.status === 'playing') {
                 statusEl.textContent = '🏁 游戏中...';
                 statusEl.className = 'game-status playing';
                 readyBtn.style.display = 'none';
                 startBtn.style.display = 'none';
+                if (inviteBtn) inviteBtn.style.display = 'none';  // 游戏中隐藏邀请按钮
                 if (leaveBtn) leaveBtn.style.display = 'none';
             } else {
                 // 等待中
                 const readyCount = currentRoom.players.filter(p => p.ready).length;
                 statusEl.textContent = `⏳ 等待中 (${readyCount}/${currentRoom.players.length} 已准备)`;
                 statusEl.className = 'game-status waiting';
-                
+
                 // 显示离开按钮
                 if (leaveBtn) leaveBtn.style.display = 'inline-block';
 
+                // 显示邀请按钮（等待中）
+                if (inviteBtn) inviteBtn.style.display = 'inline-block';
+
                 if (isHost) {
                     readyBtn.style.display = 'none';
-                    const allReady = currentRoom.players.length >= 2 && 
+                    const allReady = currentRoom.players.length >= 2 &&
                                     currentRoom.players.every(p => p.ready);
                     startBtn.style.display = allReady ? 'inline-block' : 'none';
                 } else {
@@ -645,22 +897,30 @@
         function createRaceTracks() {
             const raceTrackEl = document.getElementById('raceTrack');
             const maxPlayers = currentRoom.maxPlayers || 4;
-            
+
+            // 4人或6人时使用2列布局
+            if (maxPlayers >= 4) {
+                raceTrackEl.classList.add('two-columns');
+            } else {
+                raceTrackEl.classList.remove('two-columns');
+            }
+
             raceTrackEl.innerHTML = '';
-            
+
             for (let i = 0; i < maxPlayers; i++) {
                 const player = currentRoom.players[i];
                 const laneEl = document.createElement('div');
                 laneEl.className = 'lane';
                 laneEl.id = `lane-${i}`;
-                
+
                 if (player) {
                     const isMe = player.playerId === myPlayerId;
                     const readyStatus = player.ready ? '✅' : '⏳';
                     const offlineStatus = player.isOffline ? ' (离线)' : '';
                     const offlineClass = player.isOffline ? ' offline' : '';
-                    laneEl.className = `lane${offlineClass}`;
-                    
+                    const myLaneClass = isMe ? ' my-lane' : '';
+                    laneEl.className = `lane${offlineClass}${myLaneClass}`;
+
                     laneEl.innerHTML = `
                         <div class="road-lines">
                             <div class="center-line"></div>
@@ -685,7 +945,7 @@
                         <div class="finish-line"></div>
                     `;
                 }
-                
+
                 raceTrackEl.appendChild(laneEl);
             }
         }
@@ -693,10 +953,57 @@
         // ============ 游戏控制 ============
         function toggleReady() {
             if (!socket || !currentRoomId) return;
-            
+
             socket.emit('TOGGLE_READY', {
                 roomId: currentRoomId
             });
+
+            // 播放准备音效
+            AudioEngine.sfx.ready();
+        }
+
+        // ============ 邀请功能 ============
+        function copyInviteLink() {
+            if (!currentRoomId) {
+                alert('房间ID不存在');
+                return;
+            }
+
+            // 构建邀请链接
+            const currentUrl = window.location.href.split('?')[0];
+            const inviteLink = `${currentUrl}?room=${currentRoomId}`;
+
+            // 复制到剪贴板
+            navigator.clipboard.writeText(inviteLink).then(() => {
+                alert('✅ 邀请链接已复制！\n\n' + inviteLink);
+            }).catch(err => {
+                // 如果复制失败，使用备用方法
+                const textarea = document.createElement('textarea');
+                textarea.value = inviteLink;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('✅ 邀请链接已复制！\n\n' + inviteLink);
+            });
+
+            // 播放音效
+            AudioEngine.sfx.ready();
+        }
+
+        // 检查URL参数，自动加入房间
+        function checkAutoJoin() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+
+            if (roomParam && roomParam.length === 6) {
+                // 如果有房间号参数，等待连接后自动加入
+                console.log('检测到邀请链接，准备加入房间:', roomParam);
+                return roomParam;
+            }
+            return null;
         }
 
         function startGame() {
@@ -720,13 +1027,14 @@
         function showCountdown(count) {
             const overlay = document.getElementById('countdownOverlay');
             const number = document.getElementById('countdownNumber');
-            
+
             overlay.style.display = 'flex';
-            
+
             if (count > 0) {
                 number.textContent = count;
             } else {
                 number.textContent = 'GO!';
+                AudioEngine.sfx.go();
                 setTimeout(() => {
                     overlay.style.display = 'none';
                 }, 800);
@@ -740,26 +1048,30 @@
         function startGameplay() {
             gameStartTime = Date.now();
             currentWordIndex = 0;
-            
+
+            // 开始背景音乐
+            BGMPlayer.start();
+            document.getElementById('bgmBtn').classList.add('active');
+
             // 更新游戏状态显示
             const statusEl = document.getElementById('gameStatus');
             statusEl.textContent = '🏁 游戏中...';
             statusEl.className = 'game-status playing';
-            
+
             // 隐藏所有按钮
             document.getElementById('readyBtn').style.display = 'none';
             document.getElementById('startBtn').style.display = 'none';
             document.querySelector('.btn-leave').style.display = 'none';
-            
+
             // 显示输入区域
             document.getElementById('inputSection').style.display = 'block';
-            
+
             // 显示第一个单词
             showNextWord();
-            
+
             // 启动计时器
             gameTimer = setInterval(updateGameTime, 100);
-            
+
             // 启动时间限制检查（每秒检查一次）
             if (gameTimeLimit > 0) {
                 timeLimitTimer = setInterval(() => {
@@ -771,7 +1083,7 @@
                     }
                 }, 1000);
             }
-            
+
             // 监听输入
             const wordInput = document.getElementById('wordInput');
             wordInput.value = '';
@@ -797,45 +1109,52 @@
 
         function checkInput(event) {
             const input = document.getElementById('wordInput');
-            
+
             // 如果玩家已离线，停止处理输入
             const myPlayer = currentRoom.players.find(p => p.playerId === myPlayerId);
             if (myPlayer && myPlayer.isOffline) {
                 input.disabled = true;
                 return;
             }
-            
+
             if (currentWordIndex >= words.length) return; // 已完成，不再处理输入
-            
+
             const target = words[currentWordIndex];
             const currentInput = input.value.toLowerCase();
             const targetWord = target.toLowerCase();
-            
+
             // 实时反馈
             if (currentInput.length > 0) {
+                // 播放打字音效（节流，避免太频繁）
+                if (event && event.key && event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+                    AudioEngine.sfx.click();
+                }
+
                 if (targetWord.startsWith(currentInput)) {
                     input.style.borderColor = '#667eea';
-                    
+
                     // 完全匹配
                     if (currentInput === targetWord) {
                         input.classList.add('correct');
                         setTimeout(() => input.classList.remove('correct'), 300);
-                        
+                        AudioEngine.sfx.correct();
+
                         currentWordIndex++;
                         input.value = '';
-                        
+
                         // 更新进度
                         const progress = (currentWordIndex / words.length) * 100;
                         console.log('发送进度更新:', progress, `(${currentWordIndex}/${words.length})`);
-                        
+
                         socket.emit('UPDATE_PROGRESS', {
                             roomId: currentRoomId,
                             progress: progress
                         });
-                        
+
                         // 立即更新自己的赛车
                         updatePlayerProgress(myPlayerId, progress);
-                        
+                        AudioEngine.sfx.carMove();
+
                         // 显示下一个单词或完成
                         showNextWord();
                     }
@@ -843,6 +1162,7 @@
                     // 输入错误
                     input.style.borderColor = '#f44336';
                     input.classList.add('wrong');
+                    AudioEngine.sfx.wrong();
                     setTimeout(() => {
                         input.classList.remove('wrong');
                         input.style.borderColor = '#667eea';
@@ -897,10 +1217,15 @@
                 clearInterval(timeLimitTimer);
                 timeLimitTimer = null;
             }
-            
+
+            // 停止背景音乐
+            BGMPlayer.stop();
+            document.getElementById('bgmBtn').classList.remove('active');
+
             const timeInSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
             const wpm = Math.round((words.length / timeInSeconds) * 60);
-            
+
+            AudioEngine.sfx.finish();
             console.log('🏁 完成游戏，发送FINISH_GAME事件');
             socket.emit('FINISH_GAME', {
                 roomId: currentRoomId,
@@ -915,13 +1240,13 @@
         function showResults(rankings) {
             const modal = document.getElementById('resultModal');
             const listEl = document.getElementById('resultList');
-            
+
             listEl.innerHTML = rankings.map((player, index) => {
                 const medals = ['🥇', '🥈', '🥉'];
                 const medal = medals[index] || '🏁';
                 const isMe = player.playerId === myPlayerId;
                 const offlineText = player.isOffline ? ' (离线)' : '';
-                
+
                 return `
                     <div class="result-card ${isMe ? 'my-result' : ''} ${player.isOffline ? 'offline' : ''}">
                         <div class="result-player">
@@ -939,8 +1264,14 @@
                     </div>
                 `;
             }).join('');
-            
+
             modal.style.display = 'flex';
+
+            // 播放结果音效（如果是获胜者）
+            const myRanking = rankings.findIndex(p => p.playerId === myPlayerId);
+            if (myRanking === 0) {
+                AudioEngine.sfx.win();
+            }
         }
 
         function backToLobby() {
