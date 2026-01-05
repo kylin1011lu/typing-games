@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打字赛车 - 多人对战</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 大厅视图 -->
+        <div id="lobbyView" class="view-container">
+            <!-- 头部 -->
+            <header class="header">
+                <h1>🏎️ 打字赛车对战版</h1>
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span id="displayNickname"></span>
+                    <button class="btn-small" onclick="changeNickname()">✏️ 修改</button>
+                </div>
+            </header>
+
+            <!-- 昵称输入模态框 -->
+            <div id="nicknameModal" class="modal">
+                <div class="modal-content">
+                    <h2>👋 欢迎来到打字赛车！</h2>
+                    <p>请输入你的昵称（2-12个字符）</p>
+                    <input type="text" id="nicknameInput" maxlength="12" placeholder="请输入昵称">
+                    <div class="modal-actions">
+                        <button class="btn-primary" onclick="saveNickname()">开始游戏</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主内容区 -->
+            <main class="main-content">
+                <!-- 创建/加入房间区域 -->
+                <section class="action-section">
+                    <div class="action-card">
+                        <h2>🎲 创建房间</h2>
+                        <form id="createRoomForm" onsubmit="createRoom(event)">
+                            <div class="form-group">
+                                <label>最大人数</label>
+                                <select id="maxPlayers">
+                                    <option value="2">2人</option>
+                                    <option value="4" selected>4人</option>
+                                    <option value="6">6人</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>难度等级</label>
+                                <select id="difficulty">
+                                    <option value="easy">简单</option>
+                                    <option value="medium" selected>中等</option>
+                                    <option value="hard">困难</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary">创建房间</button>
+                        </form>
+                    </div>
+
+                    <div class="action-card">
+                        <h2>🔑 加入房间</h2>
+                        <form id="joinRoomForm" onsubmit="joinRoomByCode(event)">
+                            <div class="form-group">
+                                <label>房间号</label>
+                                <input type="text" id="roomCode" placeholder="输入6位房间号" maxlength="6" style="text-transform: uppercase;">
+                            </div>
+                            <button type="submit" class="btn-primary">加入房间</button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- 房间列表 -->
+                <section class="room-list-section">
+                    <div class="section-header">
+                        <h2>📋 房间列表</h2>
+                        <button class="btn-secondary" onclick="refreshRoomList()">🔄 刷新</button>
+                    </div>
+                    <div id="roomList" class="room-list">
+                        <div class="empty-state">
+                            <p>暂无可用房间</p>
+                            <p class="empty-hint">创建一个房间开始游戏吧！</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- 连接状态 -->
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">连接中...</span>
+            </div>
+        </div>
+
+        <!-- 游戏视图 -->
+        <div id="gameView" class="view-container" style="display: none;">
+            <!-- 游戏头部 -->
+            <div class="game-header">
+                <div class="game-info-left">
+                    <h2 id="gameRoomName">🏠 房间名称</h2>
+                    <span class="room-code-badge">房间号: <strong id="gameRoomCode">------</strong></span>
+                </div>
+                <div class="game-info-right">
+                    <span id="gameStatus" class="game-status waiting">⏳ 等待玩家...</span>
+                    <button id="readyBtn" class="btn-ready" onclick="toggleReady()" style="display: none;">准备</button>
+                    <button id="startBtn" class="btn-start" onclick="startGame()" style="display: none;">开始游戏</button>
+                    <button class="btn-leave" onclick="leaveRoom()">❌ 离开</button>
+                </div>
+            </div>
+
+            <!-- 倒计时遮罩 -->
+            <div id="countdownOverlay" class="countdown-overlay" style="display: none;">
+                <div class="countdown-number" id="countdownNumber">3</div>
+                <div class="countdown-text">准备开始！</div>
+            </div>
+
+            <!-- 赛道区域 -->
+            <div class="race-track-container">
+                <div class="race-track" id="raceTrack">
+                    <!-- 赛道将通过JS动态生成 -->
+                </div>
+            </div>
+
+            <!-- 输入区域 (游戏中显示) -->
+            <div id="inputSection" class="input-section" style="display: none;">
+                <div class="word-display">
+                    <h3>目标单词</h3>
+                    <div class="target-word" id="targetWord">loading...</div>
+                </div>
+                <input 
+                    type="text" 
+                    id="wordInput" 
+                    class="word-input" 
+                    placeholder="开始输入..." 
+                    autocomplete="off"
+                >
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-label">⏱️ 用时</span>
+                        <span class="stat-value" id="gameTime">00:00</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">📝 进度</span>
+                        <span class="stat-value" id="wordProgress">0/20</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">⚡ 速度</span>
+                        <span class="stat-value" id="wpm">0 WPM</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结果模态框 -->
+            <div id="resultModal" class="result-modal">
+                <div class="result-content">
+                    <h2 class="result-title">🏁 比赛结果</h2>
+                    <div id="resultList"></div>
+                    <div class="result-actions">
+                        <button class="btn-primary" onclick="backToLobby()">返回大厅</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.io 客户端 -->
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script>
+        // ============ 全局变量 ============
+        let socket = null;
+        let currentNickname = '';
+        let currentRoomId = '';
+        let currentRoom = null;
+        let isHost = false;
+        let isReady = false;
+        let myPlayerId = '';
+        
+        // 游戏相关
+        let gameStartTime = null;
+        let currentWordIndex = 0;
+        let words = [];
+        let gameTimer = null;
+
+        // ============ 页面加载 ============
+        window.addEventListener('DOMContentLoaded', () => {
+            currentNickname = localStorage.getItem('nickname');
+            if (currentNickname) {
+                document.getElementById('displayNickname').textContent = currentNickname;
+                document.getElementById('userInfo').style.display = 'flex';
+                connectToServer();
+            } else {
+                showNicknameModal();
+            }
+        });
+
+        // ============ 昵称管理 ============
+        function showNicknameModal() {
+            document.getElementById('nicknameModal').style.display = 'flex';
+            document.getElementById('nicknameInput').focus();
+        }
+
+        function saveNickname() {
+            const nickname = document.getElementById('nicknameInput').value.trim();
+            if (nickname.length < 2 || nickname.length > 12) {
+                alert('昵称长度应为2-12个字符');
+                return;
+            }
+            
+            currentNickname = nickname;
+            localStorage.setItem('nickname', nickname);
+            document.getElementById('displayNickname').textContent = nickname;
+            document.getElementById('userInfo').style.display = 'flex';
+            document.getElementById('nicknameModal').style.display = 'none';
+            
+            connectToServer();
+        }
+
+        function changeNickname() {
+            document.getElementById('nicknameInput').value = currentNickname;
+            showNicknameModal();
+        }
+
+        // ============ Socket连接 ============
+        function connectToServer() {
+            const serverUrl = 'http://localhost:3000';
+            socket = io(serverUrl);
+
+            socket.on('connect', () => {
+                myPlayerId = socket.id;
+                console.log('✅ 已连接到服务器, ID:', myPlayerId);
+                updateConnectionStatus('已连接', true);
+                refreshRoomList();
+            });
+
+            socket.on('disconnect', () => {
+                updateConnectionStatus('已断开', false);
+                console.log('❌ 与服务器断开连接');
+                // 显示断线提示
+                const gameViewElement = document.getElementById('gameView');
+                const isInGame = gameViewElement && gameViewElement.style.display === 'block';
+                
+                alert('❌ 与服务器连接已断开，请刷新页面重新连接');
+                
+                // 如果在游戏界面，切换到大厅
+                if (isInGame) {
+                    switchToLobbyView();
+                    refreshRoomList();
+                }
+            });
+
+            socket.on('connect_error', () => {
+                updateConnectionStatus('连接失败', false);
+                console.error('❌ 连接服务器失败');
+            });
+
+            // 监听房间列表更新
+            socket.on('ROOM_LIST_UPDATE', (data) => {
+                displayRoomList(data.rooms);
+            });
+
+            // 监听房间创建成功
+            socket.on('ROOM_CREATED', (data) => {
+                console.log('🏠 房间创建成功:', data.roomId);
+                currentRoomId = data.roomId;
+                currentRoom = data.room;
+                isHost = true;
+                switchToGameView();
+            });
+
+            // 监听玩家加入
+            socket.on('PLAYER_JOINED', (data) => {
+                console.log('👤 玩家加入:', data.player.nickname);
+                currentRoom = data.room;
+                updateGameDisplay();
+            });
+
+            // 监听玩家离开
+            socket.on('PLAYER_LEFT', (data) => {
+                console.log('👋 玩家离开:', data.nickname);
+                currentRoom = data.room;
+                updateGameDisplay();
+            });
+
+            socket.on('PLAYER_OFFLINE', (data) => {
+                console.log('🔌 玩家离线:', data.nickname);
+                currentRoom = data.room;
+                updateGameDisplay();
+            });
+
+            // 监听准备状态变化
+            socket.on('PLAYER_READY_CHANGED', (data) => {
+                console.log('✅ 玩家准备状态变化:', data.playerId, data.ready);
+                currentRoom = data.room;
+                
+                // 更新当前玩家的准备状态
+                const currentPlayer = currentRoom.players.find(p => p.playerId === myPlayerId);
+                if (currentPlayer) {
+                    isReady = currentPlayer.ready;
+                }
+                
+                // 重新渲染界面
+                updateGameStatus();
+                createRaceTracks();
+            });
+
+            // 监听游戏开始倒计时
+            socket.on('GAME_COUNTDOWN', (data) => {
+                console.log('⏰ 游戏即将开始, 倒计时:', data.countdown);
+                showCountdown(data.countdown);
+            });
+
+            // 监听游戏开始
+            socket.on('GAME_START', (data) => {
+                console.log('🏁 游戏开始!');
+                if (data.room) {
+                    currentRoom = data.room;
+                }
+                words = data.words;
+                gameTimeLimit = data.timeLimit || 0;  // 保存时间限制
+                console.log('⏱️ 游戏时间限制:', gameTimeLimit / 60000, '分钟');
+                startGameplay();
+            });
+
+            // 监听进度更新
+            socket.on('PROGRESS_UPDATE', (data) => {
+                updatePlayerProgress(data.playerId, data.progress);
+            });
+
+            // 监听游戏结束
+            socket.on('GAME_OVER', (data) => {
+                console.log('🏆 游戏结束!', data.rankings);
+                showResults(data.rankings);
+            });
+
+            // 监听错误消息
+            socket.on('ERROR', (data) => {
+                alert(`错误: ${data.message}`);
+            });
+        }
+
+        function updateConnectionStatus(text, connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            const dotEl = statusEl.querySelector('.status-dot');
+            const textEl = statusEl.querySelector('.status-text');
+            
+            textEl.textContent = text;
+            dotEl.className = `status-dot ${connected ? 'connected' : 'disconnected'}`;
+        }
+
+        // ============ 大厅功能 ============
+        function createRoom(event) {
+            event.preventDefault();
+            
+            if (!socket || !socket.connected) {
+                alert('未连接到服务器');
+                return;
+            }
+
+            // 重置游戏状态
+            resetGameState();
+
+            const roomName = `${currentNickname}的房间`;
+            const maxPlayers = parseInt(document.getElementById('maxPlayers').value);
+            const difficulty = document.getElementById('difficulty').value;
+
+            socket.emit('CREATE_ROOM', {
+                nickname: currentNickname,
+                roomName,
+                maxPlayers,
+                difficulty
+            });
+        }
+
+        function joinRoomByCode(event) {
+            event.preventDefault();
+            
+            const roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
+            if (roomCode.length !== 6) {
+                alert('请输入6位房间号');
+                return;
+            }
+
+            joinRoom(roomCode);
+        }
+
+        function joinRoom(roomId) {
+            if (!socket || !socket.connected) {
+                alert('未连接到服务器');
+                return;
+            }
+
+            // 重置游戏状态
+            resetGameState();
+
+            currentRoomId = roomId;
+            socket.emit('JOIN_ROOM', {
+                roomId: roomId,
+                nickname: currentNickname
+            });
+            
+            // 等待服务器响应后切换视图
+            setTimeout(() => {
+                if (currentRoom) {
+                    switchToGameView();
+                }
+            }, 500);
+        }
+
+        function refreshRoomList() {
+            if (socket && socket.connected) {
+                socket.emit('GET_ROOM_LIST');
+            }
+        }
+
+        function displayRoomList(rooms) {
+            const roomListEl = document.getElementById('roomList');
+            
+            if (!rooms || rooms.length === 0) {
+                roomListEl.innerHTML = `
+                    <div class="empty-state">
+                        <p>暂无房间</p>
+                        <p class="empty-hint">创建一个房间开始游戏吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            roomListEl.innerHTML = rooms.map(room => {
+                const difficultyText = {
+                    easy: '简单',
+                    medium: '中等',
+                    hard: '困难'
+                }[room.difficulty];
+
+                const difficultyClass = {
+                    easy: 'easy',
+                    medium: 'medium',
+                    hard: 'hard'
+                }[room.difficulty];
+                
+                // 根据房间状态确定显示的状态标签和是否禁用
+                let statusText = '🟢 等待中';
+                let statusClass = 'status-waiting';
+                let isDisabled = false;
+                let onClickHandler = `onclick="joinRoom('${room.roomId}')"`;
+                let cardClass = 'room-card';
+                let joinButton = `<button class="btn-join" onclick="event.stopPropagation(); joinRoom('${room.roomId}')">📍 加入房间</button>`;
+                
+                if (room.status === 'playing') {
+                    statusText = '🎮 游戏中';
+                    statusClass = 'status-playing';
+                    isDisabled = true;
+                    onClickHandler = 'onclick="alert(\'游戏已开始，无法加入\')"';
+                    cardClass = 'room-card disabled';
+                    joinButton = '<span class="btn-disabled">❌ 游戏进行中</span>';
+                } else if (room.status !== 'waiting') {
+                    statusText = '⏳ 已结束';
+                    statusClass = 'status-finished';
+                    isDisabled = true;
+                    onClickHandler = 'onclick="alert(\'游戏已结束，无法加入\')"';
+                    cardClass = 'room-card disabled';
+                    joinButton = '<span class="btn-disabled">❌ 游戏已结束</span>';
+                }
+
+                return `
+                    <div class="${cardClass}">
+                        <div class="room-content" ${!isDisabled ? onClickHandler : ''}>
+                            <div class="room-header">
+                                <h3>🏠 ${room.roomName}</h3>
+                                <span class="room-id">${room.roomId}</span>
+                            </div>
+                            <div class="room-info">
+                                <span>👤 ${room.hostName}</span>
+                                <span class="difficulty-badge ${difficultyClass}">${difficultyText}</span>
+                            </div>
+                            <div class="room-footer">
+                                <span>👥 ${room.playerCount}/${room.maxPlayers}</span>
+                                <span class="${statusClass}">${statusText}</span>
+                            </div>
+                        </div>
+                        <div class="room-action">
+                            ${joinButton}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============ 游戏状态重置 ============
+        function resetGameState() {
+            // 重置所有游戏状态变量
+            currentRoomId = '';
+            currentRoom = null;
+            isHost = false;
+            isReady = false;
+            currentWordIndex = 0;
+            words = [];
+            gameStartTime = null;
+            gameTimeLimit = 0;
+            
+            // 清理所有定时器
+            if (gameTimer) {
+                clearInterval(gameTimer);
+                gameTimer = null;
+            }
+            if (timeLimitTimer) {
+                clearInterval(timeLimitTimer);
+                timeLimitTimer = null;
+            }
+            
+            // 清空 DOM 元素（仅当元素存在时）
+            const gameRoomNameEl = document.getElementById('gameRoomName');
+            if (gameRoomNameEl) gameRoomNameEl.textContent = '';
+            
+            const gameRoomCodeEl = document.getElementById('gameRoomCode');
+            if (gameRoomCodeEl) gameRoomCodeEl.textContent = '';
+            
+            const raceTrackEl = document.getElementById('raceTrack');
+            if (raceTrackEl) raceTrackEl.innerHTML = '';
+            
+            const wordDisplayEl = document.getElementById('wordDisplay');
+            if (wordDisplayEl) wordDisplayEl.textContent = '';
+            
+            const wordInputEl = document.getElementById('wordInput');
+            if (wordInputEl) {
+                wordInputEl.value = '';
+                wordInputEl.style.borderColor = '#667eea';
+                wordInputEl.disabled = false;
+            }
+            
+            const gameStatusEl = document.getElementById('gameStatus');
+            if (gameStatusEl) gameStatusEl.textContent = '';
+            
+            const statusTimeEl = document.getElementById('statusTime');
+            if (statusTimeEl) statusTimeEl.textContent = '';
+            
+            const statusProgressEl = document.getElementById('statusProgress');
+            if (statusProgressEl) statusProgressEl.textContent = '';
+            
+            // 隐藏输入区域
+            const inputSectionEl = document.getElementById('inputSection');
+            if (inputSectionEl) inputSectionEl.style.display = 'none';
+            
+            // 清空目标单词和输入框
+            const targetWordEl = document.getElementById('targetWord');
+            if (targetWordEl) targetWordEl.textContent = 'loading...';
+            
+            const gameTimeEl = document.getElementById('gameTime');
+            if (gameTimeEl) gameTimeEl.textContent = '00:00';
+            
+            const wordProgressEl = document.getElementById('wordProgress');
+            if (wordProgressEl) wordProgressEl.textContent = '0/20';
+            
+            const wpmEl = document.getElementById('wpm');
+            if (wpmEl) wpmEl.textContent = '0 WPM';
+            
+            // 隐藏游戏按钮
+            const btnReadyEl = document.getElementById('btnReady');
+            if (btnReadyEl) btnReadyEl.style.display = 'none';
+            
+            const btnStartEl = document.getElementById('btnStart');
+            if (btnStartEl) btnStartEl.style.display = 'none';
+            
+            const btnLeaveEl = document.getElementById('btnLeave');
+            if (btnLeaveEl) btnLeaveEl.style.display = 'none';
+        }
+
+        // ============ 视图切换 ============
+        function switchToGameView() {
+            document.getElementById('lobbyView').style.display = 'none';
+            document.getElementById('gameView').style.display = 'block';
+            updateGameDisplay();
+        }
+
+        function switchToLobbyView() {
+            document.getElementById('gameView').style.display = 'none';
+            document.getElementById('lobbyView').style.display = 'block';
+            
+            // 重置游戏状态
+            resetGameState();
+            
+            refreshRoomList();
+        }
+
+        // ============ 游戏界面更新 ============
+        function updateGameDisplay() {
+            if (!currentRoom) return;
+
+            // 更新房间信息
+            document.getElementById('gameRoomName').textContent = `🏠 ${currentRoom.roomName}`;
+            document.getElementById('gameRoomCode').textContent = currentRoom.roomId;
+
+            // 检查是否为房主
+            isHost = currentRoom.hostId === myPlayerId;
+            console.log('👑 房主检查:', { hostId: currentRoom.hostId, myId: myPlayerId, isHost });
+
+            // 获取当前玩家的准备状态
+            const currentPlayer = currentRoom.players.find(p => p.playerId === myPlayerId);
+            if (currentPlayer) {
+                isReady = currentPlayer.ready;
+            }
+
+            // 更新游戏状态和按钮
+            updateGameStatus();
+            
+            // 生成赛道
+            createRaceTracks();
+        }
+
+        function updateGameStatus() {
+            const statusEl = document.getElementById('gameStatus');
+            const readyBtn = document.getElementById('readyBtn');
+            const startBtn = document.getElementById('startBtn');
+            const leaveBtn = document.querySelector('.btn-leave');
+
+            if (currentRoom.status === 'playing') {
+                statusEl.textContent = '🏁 游戏中...';
+                statusEl.className = 'game-status playing';
+                readyBtn.style.display = 'none';
+                startBtn.style.display = 'none';
+                if (leaveBtn) leaveBtn.style.display = 'none';
+            } else {
+                // 等待中
+                const readyCount = currentRoom.players.filter(p => p.ready).length;
+                statusEl.textContent = `⏳ 等待中 (${readyCount}/${currentRoom.players.length} 已准备)`;
+                statusEl.className = 'game-status waiting';
+                
+                // 显示离开按钮
+                if (leaveBtn) leaveBtn.style.display = 'inline-block';
+
+                if (isHost) {
+                    readyBtn.style.display = 'none';
+                    const allReady = currentRoom.players.length >= 2 && 
+                                    currentRoom.players.every(p => p.ready);
+                    startBtn.style.display = allReady ? 'inline-block' : 'none';
+                } else {
+                    readyBtn.style.display = 'inline-block';
+                    readyBtn.textContent = isReady ? '✅ 已准备' : '准备';
+                    readyBtn.className = isReady ? 'btn-ready ready' : 'btn-ready';
+                    startBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function createRaceTracks() {
+            const raceTrackEl = document.getElementById('raceTrack');
+            const maxPlayers = currentRoom.maxPlayers || 4;
+            
+            raceTrackEl.innerHTML = '';
+            
+            for (let i = 0; i < maxPlayers; i++) {
+                const player = currentRoom.players[i];
+                const laneEl = document.createElement('div');
+                laneEl.className = 'lane';
+                laneEl.id = `lane-${i}`;
+                
+                if (player) {
+                    const isMe = player.playerId === myPlayerId;
+                    const readyStatus = player.ready ? '✅' : '⏳';
+                    const offlineStatus = player.isOffline ? ' (离线)' : '';
+                    const offlineClass = player.isOffline ? ' offline' : '';
+                    laneEl.className = `lane${offlineClass}`;
+                    
+                    laneEl.innerHTML = `
+                        <div class="road-lines">
+                            <div class="center-line"></div>
+                        </div>
+                        <div class="lane-header ${isMe ? 'me' : ''}${offlineClass}">
+                            ${isMe ? '🧑' : '👤'} ${player.nickname}${offlineStatus} ${!player.isOffline ? readyStatus : '❌'}
+                        </div>
+                        <div class="car${offlineClass}" id="car-${i}">
+                            <div class="car-body">
+                                <div class="car-window"></div>
+                                <div class="car-wheel wheel-front"></div>
+                                <div class="car-wheel wheel-back"></div>
+                            </div>
+                        </div>
+                        <div class="finish-line"></div>
+                    `;
+                } else {
+                    laneEl.innerHTML = `
+                        <div class="lane-header empty">
+                            🏁 ${i + 1}号 - 等待玩家...
+                        </div>
+                        <div class="finish-line"></div>
+                    `;
+                }
+                
+                raceTrackEl.appendChild(laneEl);
+            }
+        }
+
+        // ============ 游戏控制 ============
+        function toggleReady() {
+            if (!socket || !currentRoomId) return;
+            
+            socket.emit('TOGGLE_READY', {
+                roomId: currentRoomId
+            });
+        }
+
+        function startGame() {
+            if (!socket || !currentRoomId || !isHost) return;
+            
+            socket.emit('START_GAME', {
+                roomId: currentRoomId
+            });
+        }
+
+        function leaveRoom() {
+            if (!socket || !currentRoomId) return;
+            
+            socket.emit('LEAVE_ROOM', {
+                roomId: currentRoomId
+            });
+            
+            switchToLobbyView();
+        }
+
+        function showCountdown(count) {
+            const overlay = document.getElementById('countdownOverlay');
+            const number = document.getElementById('countdownNumber');
+            
+            overlay.style.display = 'flex';
+            
+            if (count > 0) {
+                number.textContent = count;
+            } else {
+                number.textContent = 'GO!';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                }, 800);
+            }
+        }
+
+        // ============ 游戏玩法 ============
+        let gameTimeLimit = 0;  // 游戏时间限制（毫秒）
+        let timeLimitTimer = null;  // 时间限制检查定时器
+        
+        function startGameplay() {
+            gameStartTime = Date.now();
+            currentWordIndex = 0;
+            
+            // 更新游戏状态显示
+            const statusEl = document.getElementById('gameStatus');
+            statusEl.textContent = '🏁 游戏中...';
+            statusEl.className = 'game-status playing';
+            
+            // 隐藏所有按钮
+            document.getElementById('readyBtn').style.display = 'none';
+            document.getElementById('startBtn').style.display = 'none';
+            document.querySelector('.btn-leave').style.display = 'none';
+            
+            // 显示输入区域
+            document.getElementById('inputSection').style.display = 'block';
+            
+            // 显示第一个单词
+            showNextWord();
+            
+            // 启动计时器
+            gameTimer = setInterval(updateGameTime, 100);
+            
+            // 启动时间限制检查（每秒检查一次）
+            if (gameTimeLimit > 0) {
+                timeLimitTimer = setInterval(() => {
+                    const elapsed = Date.now() - gameStartTime;
+                    if (elapsed >= gameTimeLimit) {
+                        console.log('⏰ 游戏时间到达，自动结束');
+                        document.getElementById('wordInput').disabled = true;
+                        finishGame();
+                    }
+                }, 1000);
+            }
+            
+            // 监听输入
+            const wordInput = document.getElementById('wordInput');
+            wordInput.value = '';
+            wordInput.disabled = false;
+            wordInput.focus();
+            wordInput.onkeyup = checkInput;
+        }
+
+        function showNextWord() {
+            // 更新进度显示
+            document.getElementById('wordProgress').textContent = `${currentWordIndex}/${words.length}`;
+            
+            if (currentWordIndex >= words.length) {
+                // 游戏完成，禁用输入
+                document.getElementById('wordInput').disabled = true;
+                document.getElementById('targetWord').textContent = '完成！';
+                finishGame();
+                return;
+            }
+            
+            document.getElementById('targetWord').textContent = words[currentWordIndex];
+        }
+
+        function checkInput(event) {
+            const input = document.getElementById('wordInput');
+            
+            // 如果玩家已离线，停止处理输入
+            const myPlayer = currentRoom.players.find(p => p.playerId === myPlayerId);
+            if (myPlayer && myPlayer.isOffline) {
+                input.disabled = true;
+                return;
+            }
+            
+            if (currentWordIndex >= words.length) return; // 已完成，不再处理输入
+            
+            const target = words[currentWordIndex];
+            const currentInput = input.value.toLowerCase();
+            const targetWord = target.toLowerCase();
+            
+            // 实时反馈
+            if (currentInput.length > 0) {
+                if (targetWord.startsWith(currentInput)) {
+                    input.style.borderColor = '#667eea';
+                    
+                    // 完全匹配
+                    if (currentInput === targetWord) {
+                        input.classList.add('correct');
+                        setTimeout(() => input.classList.remove('correct'), 300);
+                        
+                        currentWordIndex++;
+                        input.value = '';
+                        
+                        // 更新进度
+                        const progress = (currentWordIndex / words.length) * 100;
+                        console.log('发送进度更新:', progress, `(${currentWordIndex}/${words.length})`);
+                        
+                        socket.emit('UPDATE_PROGRESS', {
+                            roomId: currentRoomId,
+                            progress: progress
+                        });
+                        
+                        // 立即更新自己的赛车
+                        updatePlayerProgress(myPlayerId, progress);
+                        
+                        // 显示下一个单词或完成
+                        showNextWord();
+                    }
+                } else {
+                    // 输入错误
+                    input.style.borderColor = '#f44336';
+                    input.classList.add('wrong');
+                    setTimeout(() => {
+                        input.classList.remove('wrong');
+                        input.style.borderColor = '#667eea';
+                    }, 300);
+                }
+            }
+        }
+
+        function updateGameTime() {
+            if (!gameStartTime) return;
+            
+            const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById('gameTime').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            // 计算WPM
+            const wpm = currentWordIndex > 0 ? Math.round((currentWordIndex / elapsed) * 60) : 0;
+            document.getElementById('wpm').textContent = `${wpm} WPM`;
+        }
+
+        function updatePlayerProgress(playerId, progress) {
+            if (!currentRoom || !currentRoom.players) {
+                console.warn('currentRoom 未初始化，无法更新进度');
+                return;
+            }
+            
+            const player = currentRoom.players.find(p => p.playerId === playerId);
+            if (!player) {
+                console.warn('未找到玩家:', playerId);
+                return;
+            }
+            
+            const laneIndex = player.laneIndex;
+            const carEl = document.getElementById(`car-${laneIndex}`);
+            if (carEl) {
+                const position = Math.min(progress, 95);
+                carEl.style.left = `${position}%`;
+                console.log(`更新玩家 ${player.nickname} (车道${laneIndex}) 进度:`, position + '%');
+            } else {
+                console.warn(`未找到车道元素: car-${laneIndex}`);
+            }
+        }
+
+        function finishGame() {
+            if (gameTimer) {
+                clearInterval(gameTimer);
+                gameTimer = null;
+            }
+            if (timeLimitTimer) {
+                clearInterval(timeLimitTimer);
+                timeLimitTimer = null;
+            }
+            
+            const timeInSeconds = Math.floor((Date.now() - gameStartTime) / 1000);
+            const wpm = Math.round((words.length / timeInSeconds) * 60);
+            
+            console.log('🏁 完成游戏，发送FINISH_GAME事件');
+            socket.emit('FINISH_GAME', {
+                roomId: currentRoomId,
+                completionTime: timeInSeconds,
+                correctCount: words.length,
+                wrongCount: 0,
+                wpm: wpm,
+                accuracy: 100
+            });
+        }
+
+        function showResults(rankings) {
+            const modal = document.getElementById('resultModal');
+            const listEl = document.getElementById('resultList');
+            
+            listEl.innerHTML = rankings.map((player, index) => {
+                const medals = ['🥇', '🥈', '🥉'];
+                const medal = medals[index] || '🏁';
+                const isMe = player.playerId === myPlayerId;
+                const offlineText = player.isOffline ? ' (离线)' : '';
+                
+                return `
+                    <div class="result-card ${isMe ? 'my-result' : ''} ${player.isOffline ? 'offline' : ''}">
+                        <div class="result-player">
+                            <span class="result-rank">${medal}</span>
+                            <div>
+                                <div style="font-size: 1.2em; font-weight: bold;">${player.nickname}${offlineText}</div>
+                                ${isMe ? '<div style="color: #ffc107;">你</div>' : ''}
+                            </div>
+                        </div>
+                        <div class="result-stats">
+                            <div>⏱️ ${player.completionTime}秒</div>
+                            <div>⚡ ${player.wpm} WPM</div>
+                            <div>📝 ${player.accuracy}%</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            modal.style.display = 'flex';
+        }
+
+        function backToLobby() {
+            document.getElementById('resultModal').style.display = 'none';
+            switchToLobbyView();
+            refreshRoomList();
+        }
+
+        // 自动刷新房间列表
+        setInterval(() => {
+            if (socket && socket.connected && !currentRoomId) {
+                refreshRoomList();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
