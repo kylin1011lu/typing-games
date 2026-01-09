@@ -266,8 +266,10 @@
             audioContext: null,
             isPlaying: false,
             currentPattern: 0,
-            tempo: 150, // BPM
+            tempo: 180, // BPM - 更快的节奏
             scheduler: null,
+            bassOscillator: null,
+            bassGain: null,
 
             init() {
                 try {
@@ -277,26 +279,53 @@
                 }
             },
 
-            // 简单的赛车游戏背景旋律
+            // 赛车游戏背景旋律 - 更激烈、更有动感
             melody: [
-                [262, 0, 262, 0, 330, 0, 392, 0], // C4, C4, E4, G4
-                [349, 0, 349, 0, 440, 0, 523, 0], // F4, F4, A4, C5
-                [392, 0, 330, 0, 294, 0, 330, 0], // G4, E4, D4, E4
-                [262, 0, 330, 0, 392, 0, 440, 0], // C4, E4, G4, A4
+                [523, 523, 659, 659, 784, 0, 659, 0], // C5, C5, E5, E5, G5, E5 - 上升旋律
+                [698, 698, 784, 784, 880, 0, 784, 0], // F5, F5, G5, G5, A5, G5 - 持续高音
+                [784, 659, 784, 659, 880, 0, 784, 0], // G5, E5, G5, E5, A5, G5 - 跳跃感
+                [1047, 0, 880, 0, 784, 0, 880, 0], // C6, A5, G5, A5 - 高潮部分
+            ],
+            // 低音线条 - 增加厚重感
+            bassLine: [
+                [131, 131, 0, 131], // C3
+                [175, 175, 0, 175], // F3
+                [196, 196, 0, 196], // G3
+                [131, 131, 0, 147], // C3, D3
             ],
 
-            playNote(frequency, duration = 0.2, volume = 0.03) {
+            playNote(frequency, duration = 0.15, volume = 0.04, type = 'square') {
                 if (!this.audioContext) return;
 
                 const oscillator = this.audioContext.createOscillator();
                 const gainNode = this.audioContext.createGain();
 
-                oscillator.type = 'triangle';
+                oscillator.type = type; // 使用 square 波形，更有8-bit游戏感
+                oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+
+                gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
+                gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + duration);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + duration);
+            },
+
+            playBass(frequency, duration = 0.3, volume = 0.03) {
+                if (!this.audioContext || !frequency) return;
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                oscillator.type = 'triangle'; // 低音使用三角波
                 oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
 
                 gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
                 gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.02);
-                gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + duration);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
 
                 oscillator.connect(gainNode);
                 gainNode.connect(this.audioContext.destination);
@@ -323,18 +352,29 @@
                 if (!this.isPlaying) return;
 
                 const pattern = this.melody[this.currentPattern];
+                const bassPattern = this.bassLine[this.currentPattern];
                 let noteIndex = 0;
 
                 const playPattern = () => {
                     if (!this.isPlaying) return;
 
                     if (noteIndex < pattern.length) {
+                        // 播放主旋律
                         const freq = pattern[noteIndex];
                         if (freq > 0) {
-                            this.playNote(freq, 0.15, 0.02);
+                            this.playNote(freq, 0.12, 0.03, 'square');
                         }
+                        
+                        // 同时播放低音（每两拍一次）
+                        if (noteIndex % 2 === 0 && noteIndex / 2 < bassPattern.length) {
+                            const bassFreq = bassPattern[noteIndex / 2];
+                            if (bassFreq > 0) {
+                                this.playBass(bassFreq, 0.25, 0.025);
+                            }
+                        }
+                        
                         noteIndex++;
-                        setTimeout(playPattern, 60000 / this.tempo);
+                        setTimeout(playPattern, 60000 / this.tempo / 2); // 双倍速度
                     } else {
                         this.currentPattern = (this.currentPattern + 1) % this.melody.length;
                         this.playNextNote();
@@ -1062,6 +1102,8 @@
             document.getElementById('readyBtn').style.display = 'none';
             document.getElementById('startBtn').style.display = 'none';
             document.querySelector('.btn-leave').style.display = 'none';
+            const inviteBtn = document.getElementById('inviteBtn');
+            if (inviteBtn) inviteBtn.style.display = 'none';
 
             // 显示输入区域
             document.getElementById('inputSection').style.display = 'block';

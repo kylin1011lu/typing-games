@@ -203,8 +203,30 @@
             }
         }
         
+        // 检查是否有房间邀请链接
+        function checkRoomInvite() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomParam = urlParams.get('room');
+
+            if (roomParam && roomParam.length === 6) {
+                // 如果有房间号参数，直接跳转到多人游戏页面
+                console.log('检测到房间邀请链接，跳转到多人游戏:', roomParam);
+                window.location.href = `games/typing-racer-multiplayer/index.html?room=${roomParam}`;
+                return true;
+            }
+            return false;
+        }
+        
         // 页面加载时执行
-        window.addEventListener('DOMContentLoaded', loadGameProgress);
+        window.addEventListener('DOMContentLoaded', () => {
+            // 先检查房间邀请，如果有则跳转
+            if (checkRoomInvite()) {
+                return; // 跳转后不再执行其他逻辑
+            }
+            
+            // 正常加载游戏进度
+            loadGameProgress();
+        });
     </script>
 </body>
 </html>
