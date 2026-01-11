@@ -99,6 +99,60 @@
                 <button class="audio-btn bgm-btn" onclick="toggleBGM()" id="bgmBtn" title="背景音乐">
                     🎵
                 </button>
+                <button class="audio-btn help-btn" onclick="showHelp()" title="游戏说明">
+                    ❓
+                </button>
+            </div>
+            
+            <!-- 游戏说明弹窗 -->
+            <div class="help-modal" id="helpModal" style="display: none;">
+                <div class="help-content">
+                    <h2>🏎️ 打字赛车对战版 - 游戏说明</h2>
+                    
+                    <div class="help-section">
+                        <h3>🎮 游戏规则</h3>
+                        <p>这是一个多人实时竞速打字游戏！</p>
+                        <ul>
+                            <li><strong>创建/加入房间：</strong>最多支持 2-6 人同时对战</li>
+                            <li><strong>选择难度：</strong>简单（3-4字母）、中等（5-7字母）、困难（7字母以上）</li>
+                            <li><strong>准备开始：</strong>所有玩家点击"准备"后，房主可以开始游戏</li>
+                            <li><strong>打字竞速：</strong>快速准确输入屏幕上的单词，让赛车前进</li>
+                            <li><strong>第一名获胜：</strong>最先完成 20 个单词的玩家获胜！🏆</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>⏱️ 时间限制</h3>
+                        <ul>
+                            <li>简单难度：5 分钟</li>
+                            <li>中等难度：10 分钟</li>
+                            <li>困难难度：15 分钟</li>
+                        </ul>
+                        <p class="tip">⚡ 超时未完成的玩家将自动结束游戏</p>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>🎯 操作指南</h3>
+                        <ul>
+                            <li><strong>输入单词：</strong>看到目标单词后，快速在输入框中输入</li>
+                            <li><strong>实时反馈：</strong>输入正确会显示绿色边框，错误显示红色</li>
+                            <li><strong>进度显示：</strong>可以看到所有玩家的实时位置</li>
+                            <li><strong>邀请好友：</strong>点击"📤 邀请"按钮复制房间链接分享给朋友</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-section">
+                        <h3>💡 小提示</h3>
+                        <ul>
+                            <li>保持正确的手指位置，准确比速度更重要</li>
+                            <li>游戏中会有动感背景音乐，可以点击 🎵 开关</li>
+                            <li>如果中途离线，可以重新加入继续游戏</li>
+                            <li>完成游戏后会显示 WPM（每分钟单词数）和准确率</li>
+                        </ul>
+                    </div>
+
+                    <button class="close-help-btn" onclick="closeHelp()">开始游戏</button>
+                </div>
             </div>
         </div>
 
@@ -486,6 +540,17 @@
                 BGMPlayer.start();
                 btn.classList.add('active');
             }
+        }
+
+        // ============ 帮助说明 ============
+        function showHelp() {
+            document.getElementById('helpModal').style.display = 'flex';
+            AudioEngine.sfx.click();
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').style.display = 'none';
+            AudioEngine.sfx.click();
         }
 
         // ============ Socket连接 ============

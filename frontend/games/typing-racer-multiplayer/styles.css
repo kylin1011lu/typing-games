@@ -1042,3 +1042,145 @@ body {
         font-size: 1.2em;
     }
 }
+
+/* 帮助说明弹窗 */
+.help-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 20px;
+    backdrop-filter: blur(5px);
+}
+
+.help-content {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.help-content h2 {
+    color: #667eea;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 1.8em;
+}
+
+.help-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+}
+
+.help-section h3 {
+    color: #764ba2;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.help-section p {
+    line-height: 1.8;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.help-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.help-section li {
+    padding: 10px 0;
+    padding-left: 30px;
+    position: relative;
+    line-height: 1.6;
+    color: #555;
+}
+
+.help-section li::before {
+    content: '▸';
+    position: absolute;
+    left: 10px;
+    color: #667eea;
+    font-weight: bold;
+}
+
+.help-section li strong {
+    color: #667eea;
+}
+
+.tip {
+    background: #fffbea;
+    padding: 12px;
+    border-radius: 8px;
+    border: 2px dashed #ffd93d;
+    margin-top: 10px;
+    color: #856404;
+}
+
+.close-help-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.close-help-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.help-btn {
+    background: linear-gradient(135deg, #ffd93d 0%, #ffb800 100%);
+}
+
+.help-btn:hover {
+    background: linear-gradient(135deg, #ffb800 0%, #ff9500 100%);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .help-content {
+        padding: 25px;
+        max-width: 95%;
+    }
+
+    .help-content h2 {
+        font-size: 1.4em;
+    }
+
+    .help-section h3 {
+        font-size: 1.1em;
+    }
+}

@@ -21,9 +21,65 @@ const players = new Map();      // 存储所有在线玩家 {socketId: playerDat
 
 // ============ 单词库 ============
 const wordBank = {
-    easy: ['cat', 'dog', 'sun', 'run', 'fun', 'hat', 'pen', 'cup', 'fox', 'box', 'car', 'eye', 'red', 'day', 'boy'],
-    medium: ['apple', 'happy', 'water', 'hello', 'world', 'house', 'mouse', 'bread', 'cloud', 'tiger', 'green', 'smile', 'table', 'phone', 'music'],
-    hard: ['computer', 'rainbow', 'elephant', 'butterfly', 'mountain', 'sunshine', 'playground', 'wonderful', 'keyboard', 'adventure', 'chocolate', 'basketball', 'library', 'umbrella', 'vegetable']
+    // 简单 - 3-4字母单词（适合6-8岁）
+    easy: [
+        // 动物类
+        'cat', 'dog', 'fox', 'cow', 'pig', 'hen', 'bee', 'ant', 'fly', 'bat',
+        // 物品类
+        'pen', 'cup', 'box', 'hat', 'bag', 'key', 'map', 'toy', 'bed', 'bus',
+        // 自然类
+        'sun', 'sky', 'sea', 'ice', 'hot', 'wet', 'dry', 'day', 'air', 'leg',
+        // 动作类
+        'run', 'fun', 'sit', 'eat', 'see', 'fly', 'hop', 'dig', 'cut', 'mix',
+        // 颜色类
+        'red', 'blue', 'pink', 'gray', 'gold',
+        // 数字类
+        'one', 'two', 'six', 'ten',
+        // 其他
+        'boy', 'girl', 'mom', 'dad', 'eye', 'ear', 'arm', 'yes', 'no', 'big', 'new', 'old', 'car', 'van', 'jet'
+    ],
+    
+    // 中等 - 5-7字母单词（适合8-10岁）
+    medium: [
+        // 食物类
+        'apple', 'bread', 'water', 'juice', 'pizza', 'candy', 'honey', 'lemon', 'melon', 'mango',
+        // 动物类
+        'tiger', 'mouse', 'horse', 'sheep', 'eagle', 'panda', 'zebra', 'whale', 'snake', 'monkey',
+        // 自然类
+        'cloud', 'ocean', 'river', 'beach', 'storm', 'winter', 'spring', 'summer', 'forest', 'flower',
+        // 物品类
+        'table', 'chair', 'phone', 'clock', 'light', 'brush', 'towel', 'spoon', 'plate', 'bottle',
+        // 建筑类
+        'house', 'store', 'hotel', 'castle', 'bridge', 'tower', 'school', 'market', 'garden', 'window',
+        // 情感类
+        'happy', 'smile', 'laugh', 'peace', 'dream', 'magic', 'lucky', 'brave', 'proud', 'sweet',
+        // 动作类
+        'dance', 'climb', 'write', 'paint', 'teach', 'learn', 'build', 'speak', 'think', 'study',
+        // 其他
+        'hello', 'world', 'music', 'story', 'friend', 'family', 'green', 'yellow', 'purple', 'orange'
+    ],
+    
+    // 困难 - 7字母以上单词（适合10-12岁）
+    hard: [
+        // 科技类
+        'computer', 'keyboard', 'internet', 'website', 'software', 'program', 'printer', 'monitor', 'battery', 'telephone',
+        // 自然类
+        'rainbow', 'mountain', 'sunshine', 'waterfall', 'volcano', 'earthquake', 'lightning', 'starlight', 'moonlight', 'tropical',
+        // 动物类
+        'elephant', 'butterfly', 'crocodile', 'kangaroo', 'giraffe', 'penguin', 'flamingo', 'seahorse', 'octopus', 'dragonfly',
+        // 地点类
+        'playground', 'restaurant', 'hospital', 'apartment', 'airport', 'supermarket', 'bookstore', 'stadium', 'aquarium', 'museum',
+        // 食物类
+        'chocolate', 'vegetable', 'strawberry', 'pineapple', 'blueberry', 'watermelon', 'sandwich', 'breakfast', 'spaghetti', 'hamburger',
+        // 活动类
+        'adventure', 'celebrate', 'exercise', 'swimming', 'basketball', 'football', 'baseball', 'volleyball', 'badminton', 'treasure',
+        // 教育类
+        'library', 'dictionary', 'homework', 'classroom', 'knowledge', 'science', 'history', 'geography', 'mathematics', 'education',
+        // 形容词
+        'wonderful', 'beautiful', 'delicious', 'fantastic', 'important', 'different', 'colorful', 'amazing', 'exciting', 'incredible',
+        // 其他
+        'birthday', 'calendar', 'envelope', 'umbrella', 'magazine', 'photograph', 'firework', 'weekend', 'holiday', 'champion'
+    ]
 };
 
 // ============ 工具函数 ============
