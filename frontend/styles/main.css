@@ -147,10 +147,72 @@ h1 {
 }
 
 footer {
-    margin-top: 30px;
+    margin-top: 50px;
+    padding-top: 40px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.footer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.footer-section {
     text-align: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 15px;
+    transition: transform 0.3s ease;
+}
+
+.footer-section:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.footer-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.footer-section h3 {
+    color: #667eea;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.footer-section p {
     color: #666;
-    font-size: 1.1em;
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+.footer-section a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+.footer-section a:hover {
+    color: #764ba2;
+    text-decoration: underline;
+}
+
+.footer-tip {
+    text-align: center;
+    padding: 15px;
+    background: #fffbea;
+    border-radius: 10px;
+    border: 2px dashed #ffd93d;
+}
+
+.footer-tip p {
+    color: #666;
+    font-size: 1em;
+    margin: 0;
 }
 
 /* 游戏通用样式 */
