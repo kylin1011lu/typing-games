@@ -1,54 +1,53 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 从 .env 文件加载配置（如果存在）
-if [ -f .env ]; then
-  export $(cat .env | grep -v '^#' | xargs)
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$SCRIPT_DIR/.env"
+  set +a
 fi
 
 # 配置信息（可通过环境变量覆盖）
-SERVER_USER="${SERVER_USER:-root}"
-SERVER_IP="${SERVER_IP:-your-server-ip}"
-REMOTE_PATH="${REMOTE_PATH:-/var/www/typing-games/backend}"
+DEPLOY_TARGET="${DEPLOY_TARGET:-${GAMEAI_DEPLOY_TARGET:-${SERVER_HOST:-${SERVER_IP:-gameai-aliyun}}}}"
+SSH_PORT="${SSH_PORT:-${GAMEAI_SSH_PORT:-22}}"
+REMOTE_PATH="${TYPING_GAMES_BACKEND_PATH:-${REMOTE_PATH:-/srv/lab/typing-games/backend}}"
 APP_NAME="${APP_NAME:-typing-games-backend}"
 NODE_ENV="${NODE_ENV:-production}"
+PORT="${PORT:-3002}"
+BACKUP_ROOT="${BACKUP_ROOT:-/srv/ops/backups/typing-games-backend}"
 
-# 检查必要的配置
-if [ "$SERVER_IP" = "your-server-ip" ]; then
-  echo "❌ 错误: 请在 .env 文件中设置 SERVER_IP"
-  echo "提示: 在 deployment 目录下创建 .env 文件，内容示例:"
-  echo "  SERVER_IP=your-server-ip"
-  echo "  SERVER_USER=root"
-  echo "  REMOTE_PATH=/var/www/typing-games/backend"
-  exit 1
-fi
-
-# 确保脚本在错误时停止执行
-set -e
+SSH_CMD=(ssh -p "$SSH_PORT" "$DEPLOY_TARGET")
+RSYNC_SSH="ssh -p $SSH_PORT"
 
 echo "🚀 开始部署..."
-echo "📍 目标服务器: $SERVER_USER@$SERVER_IP"
+echo "📍 目标服务器: $DEPLOY_TARGET"
 echo "📂 远程路径: $REMOTE_PATH"
 echo ""
 
 # 测试 SSH 连接
 echo "🔍 测试 SSH 连接..."
-if ! ssh -o ConnectTimeout=10 -o BatchMode=yes $SERVER_USER@$SERVER_IP "echo '✅ SSH 连接成功'" 2>/dev/null; then
-  echo "❌ 无法连接到服务器 $SERVER_USER@$SERVER_IP"
+if ! ssh -p "$SSH_PORT" -o ConnectTimeout=10 -o BatchMode=yes "$DEPLOY_TARGET" "echo '✅ SSH 连接成功'" 2>/dev/null; then
+  echo "❌ 无法连接到服务器 $DEPLOY_TARGET"
   echo ""
   echo "可能的原因:"
-  echo "  1. 服务器地址或用户名错误"
-  echo "  2. SSH 密钥未配置（请运行 ssh-copy-id $SERVER_USER@$SERVER_IP）"
+  echo "  1. 服务器地址或 SSH alias 错误"
+  echo "  2. SSH 密钥未配置"
   echo "  3. 服务器防火墙阻止 SSH 连接"
   echo "  4. 网络连接问题"
   echo ""
-  echo "请先手动测试 SSH 连接: ssh $SERVER_USER@$SERVER_IP"
+  echo "请先手动测试 SSH 连接: ssh -p $SSH_PORT $DEPLOY_TARGET"
   exit 1
 fi
 echo ""
 
 # 检查并安装 rsync
 echo "🔍 检查远程服务器环境..."
-ssh $SERVER_USER@$SERVER_IP << 'EOF'
+"${SSH_CMD[@]}" << 'EOF'
   # 检查 rsync 是否安装
   if ! command -v rsync &> /dev/null; then
     echo "📦 正在安装 rsync..."
@@ -67,21 +66,26 @@ EOF
 
 # 创建远程目录
 echo "📁 创建远程目录..."
-ssh $SERVER_USER@$SERVER_IP "mkdir -p $REMOTE_PATH && echo '✅ 目录已创建: $REMOTE_PATH'"
+"${SSH_CMD[@]}" "mkdir -p '$REMOTE_PATH' && echo '✅ 目录已创建: $REMOTE_PATH'"
 echo ""
 
-# 切换到项目根目录（从deployment文件夹回到上级目录）
-cd "$(dirname "$0")/.."
+# 切换到项目根目录（从 deployment 文件夹回到上级目录）
+cd "$SCRIPT_DIR/.."
 
-# 1. 同步文件到服务器（排除本地数据和上传文件）
+# 1. 备份当前远端目录
+echo "🗄️  备份远端目录..."
+"${SSH_CMD[@]}" "set -euo pipefail; mkdir -p '$BACKUP_ROOT'; if [ -d '$REMOTE_PATH' ]; then tar -C '$REMOTE_PATH' -czf '$BACKUP_ROOT/typing-games-backend-\$(date +%Y%m%d-%H%M%S).tgz' .; fi"
+echo ""
+
+# 2. 同步文件到服务器（排除本地数据和上传文件）
 echo "📦 同步文件到服务器..."
 if rsync -avz --progress \
   --exclude 'node_modules' \
   --exclude 'deployment' \
   --exclude '.git' \
   --exclude '.env' \
-  -e "ssh -o ConnectTimeout=30" \
-  ./ $SERVER_USER@$SERVER_IP:$REMOTE_PATH/; then
+  -e "$RSYNC_SSH -o ConnectTimeout=30" \
+  ./ "$DEPLOY_TARGET:$REMOTE_PATH/"; then
   echo "✅ 文件同步完成"
 else
   echo "❌ 文件同步失败"
@@ -89,9 +93,9 @@ else
 fi
 echo ""
 
-# 2. 在远程服务器上执行部署步骤
+# 3. 在远程服务器上执行部署步骤
 echo "🔧 在远程服务器上执行部署..."
-ssh $SERVER_USER@$SERVER_IP "bash -s" << EOF
+"${SSH_CMD[@]}" "bash -s" << EOF
   cd $REMOTE_PATH
 
   # 安装依赖
@@ -106,18 +110,13 @@ ssh $SERVER_USER@$SERVER_IP "bash -s" << EOF
 
   # 重启或启动服务
   echo "🔄 重启服务..."
-  if pm2 list | grep -q "$APP_NAME"; then
-    pm2 restart $APP_NAME --update-env
-  else
-    # 设置环境变量并启动
-    pm2 start server.js \
-      --name $APP_NAME \
-      --env production \
-      -i 1
-  fi
+  pm2 delete $APP_NAME 2>/dev/null || true
+  PORT=$PORT NODE_ENV=$NODE_ENV pm2 start server.js \
+    --name $APP_NAME \
+    -i 1
 
   # 设置 PM2 开机自启
-  pm2 startup systemd -u $SERVER_USER --hp /root || true
+  pm2 startup systemd -u root --hp /root || true
 
   # 保存 PM2 进程列表
   pm2 save
@@ -130,4 +129,4 @@ EOF
 
 echo ""
 echo "✅ 部署完成！"
-echo "📝 查看日志: ssh $SERVER_USER@$SERVER_IP 'pm2 logs $APP_NAME'"
+echo "📝 查看日志: ssh -p $SSH_PORT $DEPLOY_TARGET 'pm2 logs $APP_NAME'"

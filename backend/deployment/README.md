@@ -31,6 +31,22 @@
 
 ### 第一步：配置服务器信息
 
+当前 Aliyun 共享服务器默认值已经写入 `deploy.sh`：
+
+```bash
+DEPLOY_TARGET=gameai-aliyun
+REMOTE_PATH=/srv/lab/typing-games/backend
+APP_NAME=typing-games-backend
+PORT=3002
+```
+
+在 `/Users/jackie/Documents/GitHub/aliyun-ops` 中优先使用注册服务 wrapper：
+
+```bash
+bin/deploy-service.sh typing-games-backend --dry-run
+bin/deploy-service.sh typing-games-backend --yes
+```
+
 1. 复制环境配置模板：
 ```bash
 cd backend/deployment
@@ -40,11 +56,11 @@ cp .env.example .env
 2. 编辑 `.env` 文件，填写您的服务器信息：
 ```bash
 SERVER_USER=root                              # SSH 用户名
-SERVER_IP=123.456.789.123                     # 服务器公网IP
-REMOTE_PATH=/var/www/typing-games/backend     # 服务器部署路径
+SERVER_HOST=gameai-aliyun                     # SSH alias 或服务器地址
+REMOTE_PATH=/srv/lab/typing-games/backend     # 服务器部署路径
 APP_NAME=typing-games-backend                 # PM2 应用名称
 NODE_ENV=production                           # 运行环境
-PORT=3000                                     # 服务端口
+PORT=3002                                     # 服务端口
 ```
 
 ### 第二步：配置 SSH 密钥登录（推荐）
